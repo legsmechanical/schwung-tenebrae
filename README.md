@@ -228,10 +228,6 @@ Engine and presets: original to this repository, MIT.
 
 Building, testing and measuring: see [DEVELOPMENT.md](DEVELOPMENT.md).
 
-TinyK (fleshinachair) was the reference for the *balance* this aims at — hot
-filter passband and extra fundamental for weight, a non-oversampled filter and
-a hard clip after the amp for grit. No TinyK code or data is used.
-
 `src/host/plugin_api_v1.h` and `src/host/move_info.h` are copied unchanged from
 Schwung (Charles Vestal, MIT).
 
