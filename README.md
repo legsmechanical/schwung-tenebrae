@@ -1,11 +1,13 @@
 # Tenebrae
 
-A synth for synthwave, darksynth and darkwave, for
+A dark, retro synth with an edge, for
 [Schwung](https://github.com/charlesvestal/schwung) on Ableton Move.
 
-Tenebrae is built to get you to the sounds of the genre fast: the rolling
-bass, the wide supersaw pad, the arp in a dotted echo, the gliding lead, the
-gated stab, and the tape that has been played too often. It has five pages of
+Tenebrae is for sounds with a shadow over them: basses that snarl, pads that
+drift out of tune, leads that scream through a hard clip, plucks that vanish
+into long echoes, bells from somewhere they shouldn't be, and a worn tape
+wobbling under all of it. Very little sits still: envelopes, LFOs and
+tempo-locked effects keep every sound moving. It has five pages of
 eight knobs. Three of them make the sound and two dress it. Every knob is a
 *macro*: one turn moves several things at once, and each range is cut so that
 most of its travel sounds good.
@@ -15,8 +17,8 @@ most of its travel sounds good.
 - **A gritty filter** with three kinds of drive on one knob.
 - **A cinematic effects chain**: chorus, phaser, tempo pump, VHS, tape delay
   and a reverb with shimmer.
-- **163 presets**, from the genre's staples to a set of retro and modern
-  horror-soundtrack sounds.
+- **163 presets**, from heavy basses and wide pads to a set of retro and
+  modern horror-soundtrack sounds.
 - **8 voices**, with mono and glide modes.
 
 ## Install
@@ -175,7 +177,7 @@ and 8 effects (**FX**).
 
 Within each category the presets come in this order:
 
-- **Staples**: the sounds these genres are built from.
+- **Staples**: the basses, pads, leads and keys everything else builds on.
 - **The effect is the sound**: a pump that makes the rhythm, a delay that
   plays the other half of the line, a tail an octave up, a worn-out tape.
 - **Bigger and wilder**: acid, talkbox and 808-style basses, hoover and

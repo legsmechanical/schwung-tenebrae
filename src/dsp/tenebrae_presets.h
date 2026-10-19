@@ -5,7 +5,7 @@
  *   6 stabs, 5 sequences, 8 FX.
  *
  * Inside each category, in this order:
- *   - the staples: the sounds these genres are built from, polished;
+ *   - the staples: the basses, pads, leads and keys everything builds on;
  *   - the ones where an effect IS the sound: a pump that makes the rhythm, a
  *     delay that plays the second half of the line, a tail an octave up, a
  *     worn tape;

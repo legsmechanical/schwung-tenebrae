@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "author": "legsmechanical",
   "license": "MIT",
-  "description": "Macro synth for synthwave, darksynth and darkwave. Eight oscillator models shaped by Shape, Stack and Age, a gritty state-variable filter with two-stage drive, and a cinematic effects chain: chorus, phaser, tempo pump, VHS, tape delay and shimmer reverb. 160 presets.",
+  "description": "Dark, retro macro synth with an edge: snarling basses, drifting pads, screaming leads and long, moving echoes. Eight oscillator models shaped by Shape, Stack and Age, a gritty state-variable filter with two-stage drive, and a cinematic effects chain: chorus, phaser, tempo pump, VHS, tape delay and shimmer reverb. 160 presets.",
   "ui": "ui.js",
   "dsp": "dsp.so",
   "api_version": 2,
