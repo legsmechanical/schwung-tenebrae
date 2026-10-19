@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Full history: the last step checks out main to update release.json,
+      # and this job runs on a tag.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify version match
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          MODULE_VERSION=$(jq -r .version src/module.json)
+          if [ "$TAG_VERSION" != "$MODULE_VERSION" ]; then
+            echo "ERROR: tag $TAG_VERSION does not match module.json version $MODULE_VERSION"
+            exit 1
+          fi
+          echo "Version check passed: $TAG_VERSION"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install test dependencies
+        run: python3 -m pip install --quiet numpy scipy
+
+      # Everything that can be checked off the device: the host contract, the
+      # DSP, and the preset bank. It also regenerates module.json's
+      # chain_params from the plugin, checked for drift below.
+      - name: Test
+        run: ./scripts/test.sh
+
+      - name: Check generated files are current
+        run: |
+          if ! git diff --quiet -- src/module.json; then
+            echo "ERROR: src/module.json is stale. Run scripts/build.sh and commit the result."
+            git diff --stat -- src/module.json
+            exit 1
+          fi
+
+      # build.sh re-runs itself under Docker unless it is already inside a
+      # container; running it in one here cross-compiles directly.
+      - name: Build
+        run: |
+          docker build -t tenebrae-builder -f scripts/Dockerfile .
+          docker run --rm -v "$PWD:/build" -w /build tenebrae-builder ./scripts/build.sh
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/tenebrae-module.tar.gz
+
+      # Merge into release.json rather than rewriting it: the catalog reads
+      # its name and description too.
+      - name: Update release.json
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/tenebrae-module.tar.gz"
+          git fetch origin main
+          git checkout -f main
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          jq --arg v "$VERSION" --arg u "$URL" '.version = $v | .download_url = $u' release.json > release.json.tmp
+          mv release.json.tmp release.json
+          git add release.json
+          git commit -m "chore: update release.json for ${{ github.ref_name }}" || echo "No changes to commit"
+          git push origin main
