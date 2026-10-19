@@ -1,0 +1,248 @@
+{
+  "title": "Tenebrae",
+  "children": [
+    {
+      "title": "Overview",
+      "lines": [
+        "Macro synth for",
+        "synthwave, darksynth",
+        "and darkwave.",
+        "",
+        "Three pages make the",
+        "sound: Osc, Filter,",
+        "Amp + LFO. Two more",
+        "polish it: FX Motion",
+        "and FX Space.",
+        "",
+        "Every knob is a",
+        "macro. Turn one",
+        "thing, hear a lot."
+      ]
+    },
+    {
+      "title": "Osc",
+      "children": [
+        {
+          "title": "Model + Shape",
+          "lines": [
+            "MODEL picks the",
+            "oscillator. SHAPE",
+            "is its main tone.",
+            "",
+            "Saw: triangle, saw,",
+            " then saw + square",
+            "Pulse: width",
+            "Sync: sync sweep",
+            "FM: bite (1:1)",
+            "Bell: metal, clang",
+            "Wave: digital table",
+            "Vox: oo-oh-ah-eh-ee",
+            "Zap: pitch drop for",
+            " toms and lasers"
+          ]
+        },
+        {
+          "title": "S.Env, Stack",
+          "lines": [
+            "S.ENV lets the",
+            "filter envelope",
+            "move SHAPE, up or",
+            "down. FM plucks,",
+            "sync sweeps, PWM.",
+            "",
+            "STACK:",
+            " to 10: analog",
+            "  beating, 3 oscs",
+            " 10-30: the 3 pulled",
+            "  wide, a reese",
+            " 30-55: 5 oscs",
+            " 55 up: 7, supersaw",
+            "Low notes stay in",
+            "the middle, high",
+            "notes spread wide."
+          ]
+        },
+        {
+          "title": "Layer, Blend",
+          "lines": [
+            "LAYER is a second",
+            "source: a sub, a",
+            "copy at an interval",
+            "or noise.",
+            "",
+            "SIN is the clean sub.",
+            "It skips the drive,",
+            "the filter and the",
+            "chorus, delay and",
+            "reverb, so the",
+            "bottom stays solid.",
+            "SQR and -2 are",
+            "vintage subs: they",
+            "go through it all.",
+            "",
+            "BLEND: 0 is off,",
+            "50 is both at full,",
+            "100 is the layer",
+            "alone."
+          ]
+        },
+        {
+          "title": "Age, Glide",
+          "lines": [
+            "AGE: 0 is exact and",
+            "tight. Up: each",
+            "voice drifts and",
+            "wobbles on its own,",
+            "and every note lands",
+            "a little different.",
+            "Chords beat slowly.",
+            "High is a tired old",
+            "machine. Age adds",
+            "no noise.",
+            "",
+            "GLIDE: Poly, Mono,",
+            "or a glide time.",
+            "Glide is mono and",
+            "slides only when",
+            "notes overlap."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Filter",
+      "lines": [
+        "TYPE: LP24, LP12,",
+        "band-pass, high-pass",
+        "CUT, RES: as usual.",
+        "",
+        "DRIVE has 3 zones.",
+        "To 50: the mixer",
+        "overdrives into the",
+        "filter. Warm, thick.",
+        "50-75: a hard clip",
+        "after the amp, per",
+        "note. Bite; chords",
+        "stay clean, tails",
+        "clean up.",
+        "75 up: the whole",
+        "voice mix is",
+        "clipped together.",
+        "Chords snarl.",
+        "",
+        "ENV is how far the",
+        "envelope moves the",
+        "cutoff, up or down.",
+        "ATK DCY SUS shape",
+        "it. It releases",
+        "with the amp."
+      ]
+    },
+    {
+      "title": "Amp + LFO",
+      "lines": [
+        "LFO picks what the",
+        "LFO moves:",
+        " PIT pitch (vibrato,",
+        "  comes in late)",
+        " SHP shape (PWM)",
+        " FLT filter",
+        " AMP tremolo",
+        " PAN auto-pan",
+        " S&H random filter",
+        " RMP filter ramp in",
+        "  time with tempo",
+        "DEPTH 0 is off.",
+        "",
+        "With RMP, RATE picks",
+        "1/4, 1/8, 1/8T, 1/16",
+        "or 1/32.",
+        "",
+        "VEL: how much",
+        "velocity changes",
+        "level and tone.",
+        "",
+        "Row two is the amp",
+        "envelope.",
+        "",
+        "Pad pressure and the",
+        "mod wheel add",
+        "vibrato. Pressure",
+        "also opens the",
+        "filter."
+      ]
+    },
+    {
+      "title": "FX Motion",
+      "lines": [
+        "CHORUS: I, II, I+II",
+        "are the classic",
+        "stereo chorus. ENS",
+        "is a string machine",
+        "ensemble. DIM is a",
+        "subtle widener.",
+        "MIX sets how much.",
+        "",
+        "PHASER + RATE.",
+        "",
+        "PUMP ducks the whole",
+        "sound in time with",
+        "the tempo, like a",
+        "sidechain. DIV is",
+        "how often.",
+        "",
+        "VHS: wow, flutter,",
+        "lost top, some dirt.",
+        "",
+        "TONE down is dark",
+        "and heavy. Up is",
+        "airy, and cuts the",
+        "lows so pads and",
+        "plucks stay out of",
+        "the bass."
+      ]
+    },
+    {
+      "title": "FX Space",
+      "lines": [
+        "DELAY is ping-pong",
+        "and tape-like: the",
+        "repeats darken.",
+        "TIME follows the",
+        "tempo. FDBK sets",
+        "the repeats.",
+        "",
+        "REVERB + SIZE.",
+        "COLOR: dark to",
+        "bright tail.",
+        "SHIM adds an octave",
+        "up into the tail.",
+        "",
+        "LEVEL: output."
+      ]
+    },
+    {
+      "title": "Tips",
+      "lines": [
+        "Bass: Glide = Mono,",
+        "Layer = Sub, Drive",
+        "to taste.",
+        "",
+        "Pad: Stack 40-70,",
+        "slow attack, Chorus",
+        "I, Reverb up.",
+        "",
+        "Pluck: Amp sustain",
+        "0, Env up, short",
+        "DCY, Delay 1/8 dot.",
+        "",
+        "Lead: Glide 60-150,",
+        "LFO to Pitch, a",
+        "little depth.",
+        "",
+        "Dark: Age up, VHS",
+        "up, Tone down."
+      ]
+    }
+  ]
+}
