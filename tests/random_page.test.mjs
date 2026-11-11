@@ -140,6 +140,12 @@ draw();
 ok(px[0][4] === 1, "after time away the page is drawn un-entered again");
 ok(page.handleBack(ctx) === true, "and Back still offers Revert for the roll left playing");
 
+// ---- a slow host is not "you left" ------------------------------------------------
+draw(); jog(1);
+now += 600;                   // the host skipped frames for 600 ms
+draw();
+ok(px[0][4] === 0 && texts.some((x) => x.c === 0), "a 600 ms stall in drawing does not drop you out of the list");
+
 // ---- the draw never reads params ------------------------------------------------
 let threw = null;
 try { draw(); } catch (e) { threw = e; }

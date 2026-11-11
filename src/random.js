@@ -42,8 +42,11 @@ const CATS = ['Bass', 'Lead', 'Pad', 'Keys', 'Pluck', 'Brass', 'Voice', 'Stab', 
 const ROWS = ['Vary Current'].concat(CATS);
 const OP_KEEP = 0, OP_REVERT = 1, OP_VARY = 2, OP_ROLL = 10;
 
-/* A page that has not been drawn for this long was not on screen. */
-const AWAY_MS = 250;
+/* A page that has not been drawn for this long was not on screen. Generous:
+ * a busy host can skip frames for a few hundred ms, and mistaking that for
+ * "you left" drops you out of the list mid-use. Leaving and coming back
+ * inside this window keeps the cursor where it was, which is harmless. */
+const AWAY_MS = 1000;
 
 /* The host face's glyph widths, space (32) to '~' (126), 1px spacing. */
 const GLYPH_W = '51355552335525255355555555224545555555555355555555555555555353553554555553443555555555555553135';

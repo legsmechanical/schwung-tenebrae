@@ -6,12 +6,17 @@
  * THREADING: every entry point except instance creation runs on the audio
  * callback. Nothing here allocates, locks, logs or opens a file once an
  * instance exists; the JSON builders format straight into the caller's buffer.
+ * The one other thread is the Random page's measurer (tb_rnd_worker): it runs
+ * at the lowest priority there is, and the audio side never waits for it --
+ * the hand-off both ways is lock-free.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sched.h>
+#include <unistd.h>
 #include <strings.h>
 #include <stdint.h>
 #include <math.h>
@@ -42,6 +47,7 @@ typedef struct {
     float       p[P_COUNT];        /* the roll as it was made */
     float       anchor[P_COUNT];   /* what a Vary varied */
     const char *phrase;
+    uint32_t    writes;            /* the parameter-write count when it was made */
 } tb_rjob_t;
 
 typedef struct {
@@ -77,8 +83,12 @@ typedef struct {
     pthread_mutex_t rnd_mu;
     pthread_cond_t  rnd_cv;
     int         rnd_th_on, rnd_quit;
-    uint32_t    rnd_job_gen;   /* under rnd_mu */
-    uint32_t    rnd_job_writes;
+    /* Lock-free hand-off of rnd_job: the audio side bumps rnd_job_seq to odd,
+     * writes the job, bumps it to even, then publishes rnd_job_gen. The worker
+     * copies the job and keeps the copy only if the sequence did not move. */
+    uint32_t    rnd_job_seq;
+    uint32_t    rnd_job_gen;
+    uint32_t    rnd_res_writes;
     tb_rjob_t   rnd_job;       /* under rnd_mu */
     int         quiet_blocks;
     int         idle;
@@ -335,6 +345,21 @@ static int tb_rnd_vet(const tb_rjob_t *j, float *out, tb_engine_t *e, tb_fx_t *f
 static void *tb_rnd_worker(void *arg)
 {
     tb_instance_t *inst = (tb_instance_t *)arg;
+    /* The lowest priority there is: it only ever uses time nothing else
+     * wants. A thread inherits its creator's scheduling, and an instance is
+     * created from the host's real-time audio thread -- inherited, this ran
+     * at the audio threads' own priority and starved them for the length of
+     * a measurement (dropouts, and a UI that stalled for half a second). */
+#if defined(__linux__) && defined(SCHED_IDLE)
+    {
+        struct sched_param sp; memset(&sp, 0, sizeof sp);
+        if (pthread_setschedparam(pthread_self(), SCHED_IDLE, &sp) != 0) {
+            pthread_setschedparam(pthread_self(), SCHED_OTHER, &sp);
+            (void)nice(19);
+        }
+        pthread_setname_np(pthread_self(), "tenebrae-rnd");
+    }
+#endif
     /* the scratch engine is allocated at the first roll, so an instance
      * that never rolls never holds it */
     tb_engine_t *e = NULL;
@@ -343,13 +368,30 @@ static void *tb_rnd_worker(void *arg)
     tb_rjob_t job;
     float res[P_COUNT];
     for (;;) {
+        /* Wait for work. The audio side wakes this when it can without
+         * waiting; a wake it skipped is caught by the timeout. */
         pthread_mutex_lock(&inst->rnd_mu);
-        while (!inst->rnd_quit && inst->rnd_job_gen == done) pthread_cond_wait(&inst->rnd_cv, &inst->rnd_mu);
-        if (inst->rnd_quit) { pthread_mutex_unlock(&inst->rnd_mu); break; }
-        uint32_t gen = inst->rnd_job_gen;
-        job = inst->rnd_job;
+        while (!__atomic_load_n(&inst->rnd_quit, __ATOMIC_ACQUIRE) &&
+               __atomic_load_n(&inst->rnd_job_gen, __ATOMIC_ACQUIRE) == done) {
+            struct timespec ts;
+            clock_gettime(CLOCK_REALTIME, &ts);
+            ts.tv_nsec += 20 * 1000 * 1000;
+            if (ts.tv_nsec >= 1000000000L) { ts.tv_sec++; ts.tv_nsec -= 1000000000L; }
+            pthread_cond_timedwait(&inst->rnd_cv, &inst->rnd_mu, &ts);
+        }
         pthread_mutex_unlock(&inst->rnd_mu);
+        if (__atomic_load_n(&inst->rnd_quit, __ATOMIC_ACQUIRE)) break;
+
+        /* copy the job; keep the copy only if it was not being rewritten */
+        uint32_t gen = __atomic_load_n(&inst->rnd_job_gen, __ATOMIC_ACQUIRE);
+        uint32_t s1 = __atomic_load_n(&inst->rnd_job_seq, __ATOMIC_ACQUIRE);
+        if (s1 & 1u) continue;
+        memcpy(&job, &inst->rnd_job, sizeof job);
+        __atomic_thread_fence(__ATOMIC_ACQUIRE);
+        if (__atomic_load_n(&inst->rnd_job_seq, __ATOMIC_ACQUIRE) != s1) continue;
+        if (__atomic_load_n(&inst->rnd_job_gen, __ATOMIC_ACQUIRE) != gen) continue;
         done = gen;
+
         if (!e) e = (tb_engine_t *)malloc(sizeof(tb_engine_t));
         if (!fx) fx = (tb_fx_t *)malloc(sizeof(tb_fx_t));
         if (!e || !fx) continue;
@@ -360,6 +402,7 @@ static void *tb_rnd_worker(void *arg)
         if (__atomic_load_n(&inst->rnd_job_gen, __ATOMIC_ACQUIRE) != gen) continue;
         memcpy(inst->rnd_res_p, res, sizeof res);
         inst->rnd_res_swapped = swapped;
+        inst->rnd_res_writes = job.writes;
         __atomic_store_n(&inst->rnd_res_gen, gen, __ATOMIC_RELEASE);
     }
     free(e); free(fx);
@@ -367,12 +410,20 @@ static void *tb_rnd_worker(void *arg)
 }
 
 /* The worker starts with the instance, not at the first roll: set_param may
- * be called on the audio thread, and creating a thread there is not. */
+ * be called on the audio thread, and creating a thread there is not. It is
+ * created with ordinary scheduling, never the creator's (see the worker). */
 static void tb_rnd_start(tb_instance_t *inst)
 {
     pthread_mutex_init(&inst->rnd_mu, NULL);
     pthread_cond_init(&inst->rnd_cv, NULL);
-    inst->rnd_th_on = pthread_create(&inst->rnd_th, NULL, tb_rnd_worker, inst) == 0;
+    pthread_attr_t at;
+    pthread_attr_init(&at);
+    struct sched_param sp; memset(&sp, 0, sizeof sp);
+    pthread_attr_setinheritsched(&at, PTHREAD_EXPLICIT_SCHED);
+    pthread_attr_setschedpolicy(&at, SCHED_OTHER);
+    pthread_attr_setschedparam(&at, &sp);
+    inst->rnd_th_on = pthread_create(&inst->rnd_th, &at, tb_rnd_worker, inst) == 0;
+    pthread_attr_destroy(&at);
 }
 
 /* Apply a measured result to the sound that is playing. Called on the audio
@@ -409,15 +460,20 @@ static void tb_rnd_submit(tb_instance_t *inst, int recipe, int cat, const char *
         tb_rnd_apply(inst, res, swapped, inst->rnd_writes);
         return;
     }
-    pthread_mutex_lock(&inst->rnd_mu);
+    /* No lock: the worker may be paused at idle priority at any moment, and
+     * the audio side must never wait on it. */
+    __atomic_add_fetch(&inst->rnd_job_seq, 1u, __ATOMIC_ACQ_REL);   /* odd: writing */
     inst->rnd_job.recipe = recipe; inst->rnd_job.cat = cat; inst->rnd_job.seed = seed;
     inst->rnd_job.phrase = phrase;
     memcpy(inst->rnd_job.p, inst->eng.p, sizeof inst->rnd_job.p);
     memcpy(inst->rnd_job.anchor, inst->rnd_anchor, sizeof inst->rnd_job.anchor);
-    inst->rnd_job_writes = inst->rnd_writes;
+    inst->rnd_job.writes = inst->rnd_writes;
+    __atomic_add_fetch(&inst->rnd_job_seq, 1u, __ATOMIC_ACQ_REL);   /* even: done */
     __atomic_store_n(&inst->rnd_job_gen, inst->rnd_gen, __ATOMIC_RELEASE);
-    pthread_cond_signal(&inst->rnd_cv);
-    pthread_mutex_unlock(&inst->rnd_mu);
+    if (pthread_mutex_trylock(&inst->rnd_mu) == 0) {
+        pthread_cond_signal(&inst->rnd_cv);
+        pthread_mutex_unlock(&inst->rnd_mu);
+    }
 }
 
 /* The sound before the first roll of a run is what Revert puts back. */
@@ -738,7 +794,7 @@ static void v2_destroy_instance(void *instance)
     tb_instance_t *inst = (tb_instance_t *)instance;
     if (inst && inst->rnd_th_on) {
         pthread_mutex_lock(&inst->rnd_mu);
-        inst->rnd_quit = 1;
+        __atomic_store_n(&inst->rnd_quit, 1, __ATOMIC_RELEASE);
         pthread_cond_signal(&inst->rnd_cv);
         pthread_mutex_unlock(&inst->rnd_mu);
         pthread_join(inst->rnd_th, NULL);
@@ -892,7 +948,7 @@ static void v2_render_block(void *instance, int16_t *out_lr, int frames)
     /* A measured roll: the worker's result, applied here, idle or not (the
      * page waits on it). Its Level, or the whole replacement roll. */
     if (__atomic_load_n(&inst->rnd_res_gen, __ATOMIC_ACQUIRE) == inst->rnd_gen && inst->rnd_gen) {
-        tb_rnd_apply(inst, inst->rnd_res_p, inst->rnd_res_swapped, inst->rnd_job_writes);
+        tb_rnd_apply(inst, inst->rnd_res_p, inst->rnd_res_swapped, inst->rnd_res_writes);
         __atomic_store_n(&inst->rnd_res_gen, 0u, __ATOMIC_RELAXED);
     }
 

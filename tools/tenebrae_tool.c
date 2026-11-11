@@ -84,6 +84,17 @@ static int play(plugin_api_v2_t *api, void *inst, const ev_t *ph, int16_t *pcm, 
     return total;
 }
 
+#if defined(__linux__)
+/* Create an instance from the calling thread (the selftest runs this on a
+ * SCHED_FIFO thread, as the device's host does). */
+static void *rt_create_instance(void *arg)
+{
+    struct rt_arg { plugin_api_v2_t *api; void **out; } *ra = arg;
+    *ra->out = ra->api->create_instance(".", NULL);
+    return NULL;
+}
+#endif
+
 int main(int argc, char **argv)
 {
     static host_api_v1_t host;
@@ -454,6 +465,45 @@ int main(int argc, char **argv)
              * not -- and be what the inline path makes of the same roll. */
             void *ti = api->create_instance(".", NULL);
             tb_instance_t *t = (tb_instance_t *)ti;
+            {
+                /* the measurer never runs real-time, whoever created it */
+                int pol = -1; struct sched_param sp;
+                for (int k = 0; k < 50 && t->rnd_th_on; k++) {   /* it sets its own class as it starts */
+                    pthread_getschedparam(t->rnd_th, &pol, &sp);
+                    if (pol != SCHED_OTHER) break;
+                    struct timespec ts = { 0, 2 * 1000 * 1000 }; nanosleep(&ts, NULL);
+                }
+                CHECK(t->rnd_th_on && pol != SCHED_FIFO && pol != SCHED_RR, "the measuring thread is not real-time");
+            }
+#if defined(__linux__) && defined(SCHED_IDLE)
+            {
+                /* The device's case: the host creates an instance from its
+                 * real-time audio thread. The measurer must not inherit that. */
+                static void *made;
+                struct rt_arg { plugin_api_v2_t *api; void **out; } ra = { api, &made };
+                pthread_t rt; pthread_attr_t at; struct sched_param sp = { .sched_priority = 70 };
+                pthread_attr_init(&at);
+                pthread_attr_setinheritsched(&at, PTHREAD_EXPLICIT_SCHED);
+                pthread_attr_setschedpolicy(&at, SCHED_FIFO);
+                pthread_attr_setschedparam(&at, &sp);
+                void *(*mk)(void *) = rt_create_instance;
+                if (pthread_create(&rt, &at, mk, &ra) == 0) {
+                    pthread_join(rt, NULL);
+                    tb_instance_t *m = (tb_instance_t *)made;
+                    int pol = -1; struct sched_param q;
+                    for (int k = 0; k < 50; k++) {
+                        pthread_getschedparam(m->rnd_th, &pol, &q);
+                        if (pol == SCHED_IDLE) break;
+                        struct timespec ts = { 0, 2 * 1000 * 1000 }; nanosleep(&ts, NULL);
+                    }
+                    CHECK(pol == SCHED_IDLE, "an instance made on a real-time thread still measures at idle priority");
+                    api->destroy_instance(made);
+                } else {
+                    printf("     (no permission for a real-time thread here: the inheritance case is not checked)\n");
+                }
+                pthread_attr_destroy(&at);
+            }
+#endif
             api->set_param(ti, "rnd_seed", "5");
             snprintf(cmd, sizeof cmd, "%d", 100 + 10 + 0);
             api->set_param(ti, "rnd_cmd", cmd);
