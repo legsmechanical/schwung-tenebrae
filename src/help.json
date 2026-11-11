@@ -17,6 +17,10 @@
         "polish it: FX Motion",
         "and FX Space.",
         "",
+        "RANDOM, the last",
+        "page, makes new",
+        "sounds by kind.",
+        "",
         "Every knob is a",
         "macro. Turn one",
         "thing, hear a lot."
@@ -243,6 +247,30 @@
         "up into the tail.",
         "",
         "LEVEL: output."
+      ]
+    },
+    {
+      "title": "Random",
+      "lines": [
+        "Click in, turn to a",
+        "row, click: a new",
+        "sound of that kind.",
+        "Click again for",
+        "another.",
+        "",
+        "VARY CURRENT: a",
+        "close relative of",
+        "the sound you had.",
+        "",
+        "BACK asks Keep or",
+        "Revert. Revert puts",
+        "back the sound from",
+        "before your first",
+        "click.",
+        "",
+        "Each sound is",
+        "measured and its",
+        "Level set for you."
       ]
     },
     {

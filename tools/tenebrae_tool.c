@@ -30,62 +30,8 @@ static double g_beat = -1.0;
 static float host_bpm(void) { return g_bpm; }
 static double host_beat(void) { return g_beat; }
 
-typedef struct { double beat; int note; int vel; double len; } ev_t;
-
-/* Phrases, in beats. Chosen to exercise what each kind of sound is FOR. */
-static const ev_t PH_BASS[] = {
-    {0,28,110,.22},{.5,28,90,.22},{.75,28,100,.22},{1,40,112,.22},{1.5,28,92,.22},{1.75,28,100,.22},
-    {2,28,110,.22},{2.5,31,96,.22},{2.75,28,100,.22},{3,40,112,.22},{3.5,33,96,.22},{3.75,35,104,.22},
-    {4,24,110,.22},{4.5,24,90,.22},{4.75,24,100,.22},{5,36,112,.22},{5.5,24,92,.22},{5.75,24,100,.22},
-    {6,26,110,.22},{6.5,26,96,.22},{6.75,38,100,.22},{7,26,112,.45},{7.5,31,100,.45},{-1,0,0,0}
-};
-static const ev_t PH_LEAD[] = {
-    {0,64,105,1.05},{1,67,100,.55},{1.5,69,100,.55},{2,71,108,1.6},{3.5,69,96,.55},
-    {4,67,104,1.05},{5,64,98,1.05},{6,62,102,.55},{6.5,64,104,1.9},{-1,0,0,0}
-};
-static const ev_t PH_PAD[] = {
-    {0,52,90,3.9},{0,59,88,3.9},{0,64,90,3.9},{0,67,86,3.9},
-    {4,48,90,3.9},{4,55,88,3.9},{4,64,90,3.9},{4,67,86,3.9},{4,71,84,3.9},{-1,0,0,0}
-};
-static const ev_t PH_ARP[] = {
-    {0,52,104,.2},{.25,59,96,.2},{.5,64,100,.2},{.75,67,96,.2},{1,71,104,.2},{1.25,67,94,.2},{1.5,64,98,.2},{1.75,59,94,.2},
-    {2,52,104,.2},{2.25,59,96,.2},{2.5,64,100,.2},{2.75,67,96,.2},{3,71,104,.2},{3.25,76,98,.2},{3.5,71,98,.2},{3.75,67,94,.2},
-    {4,48,104,.2},{4.25,55,96,.2},{4.5,64,100,.2},{4.75,67,96,.2},{5,72,104,.2},{5.25,67,94,.2},{5.5,64,98,.2},{5.75,55,94,.2},
-    {6,50,104,.2},{6.25,57,96,.2},{6.5,62,100,.2},{6.75,66,96,.2},{7,69,104,.2},{7.25,74,98,.2},{7.5,69,98,.2},{7.75,66,94,.2},{-1,0,0,0}
-};
-static const ev_t PH_KEYS[] = {
-    {0,52,104,.45},{0,59,100,.45},{0,64,104,.45},{0,67,100,.45},
-    {.75,52,92,.2},{.75,64,92,.2},{.75,67,92,.2},
-    {1.5,52,104,.9},{1.5,59,100,.9},{1.5,64,104,.9},{1.5,67,100,.9},
-    {3,50,100,.45},{3,57,98,.45},{3,62,100,.45},{3,66,98,.45},
-    {4,48,104,.45},{4,55,100,.45},{4,64,104,.45},{4,67,100,.45},
-    {4.75,48,92,.2},{4.75,64,92,.2},{4.75,67,92,.2},
-    {5.5,48,104,1.4},{5.5,55,100,1.4},{5.5,64,104,1.4},{5.5,71,100,1.4},{-1,0,0,0}
-};
-static const ev_t PH_BELL[] = {
-    {0,76,100,.4},{1,79,90,.4},{1.5,83,96,.4},{2,88,104,.4},{3,83,88,.4},
-    {4,72,100,.4},{4.5,76,92,.4},{5,79,96,.4},{6,84,104,.4},{6.5,91,90,.4},{-1,0,0,0}
-};
-static const ev_t PH_FX[] = { {0,60,100,5.0},{-1,0,0,0} };
-static const ev_t PH_TOM[] = {
-    {0,55,112,.2},{.5,55,90,.2},{.75,52,104,.2},{1,48,112,.2},{1.5,43,112,.3},
-    {4,55,112,.2},{4.25,55,96,.2},{4.5,50,104,.2},{4.75,50,96,.2},{5,45,112,.2},{5.5,40,112,.4},{-1,0,0,0}
-};
-static const ev_t PH_DRONE[] = { {0,36,100,7.5},{0,43,96,7.5},{-1,0,0,0} };
-
-static const ev_t *phrase_for(const char *cat)
-{
-    if (!strcmp(cat, "bass")) return PH_BASS;
-    if (!strcmp(cat, "lead")) return PH_LEAD;
-    if (!strcmp(cat, "pad")) return PH_PAD;
-    if (!strcmp(cat, "arp")) return PH_ARP;
-    if (!strcmp(cat, "keys")) return PH_KEYS;
-    if (!strcmp(cat, "bell")) return PH_BELL;
-    if (!strcmp(cat, "fx")) return PH_FX;
-    if (!strcmp(cat, "tom")) return PH_TOM;
-    if (!strcmp(cat, "drone")) return PH_DRONE;
-    return PH_KEYS;
-}
+/* the phrases (ev_t, PH_*, phrase_for) live in src/dsp/tenebrae_phrases.h,
+ * where the Random page's level probe plays them too */
 
 static void wav_write(const char *path, const int16_t *pcm, int frames)
 {
@@ -178,6 +124,45 @@ int main(int argc, char **argv)
         apply_sets(api, inst, argc, argv, first);
         int n = play(api, inst, phrase_for(cat), pcm, SR * 60, 3.0, 1);
         wav_write(argv[3], pcm, n);
+        return 0;
+    }
+    if (!strcmp(cmd, "recipes")) {
+        for (int i = 0; i < TB_RECIPE_COUNT; i++)
+            printf("%d\t%d\t%s\t%s\n", i, TB_RECIPES[i].cat, TB_RECIPES[i].name,
+                   TB_RECIPES[i].phrase ? TB_RECIPES[i].phrase : TB_RND_PHRASE[TB_RECIPES[i].cat]);
+        return 0;
+    }
+    if ((!strcmp(cmd, "roll") || !strcmp(cmd, "rollr") || !strcmp(cmd, "vary")) && argc > 4) {
+        /* roll <category 0..9> <seed> <out.wav|-> [k=v ...]   a Random page roll
+         * rollr <recipe> <seed> <out.wav|-> [k=v ...]        a roll of one recipe
+         * vary <preset> <seed> <out.wav|-> [k=v ...]         Vary Current on a preset
+         * Measured and vetted inline, so this renders what the device ends on.
+         * "-" prints "phrase<TAB>recipe<TAB>tries<TAB>state" instead of
+         * rendering (tries: how many rolls the measured check took). */
+        tb_instance_t *ti = (tb_instance_t *)inst;
+        ti->rnd_sync = 1;
+        api->set_param(inst, "rnd_seed", argv[3]);
+        if (!strcmp(cmd, "vary")) {
+            api->set_param(inst, "preset", argv[2]);
+            tb_vary(ti);
+        } else {
+            int ri = !strcmp(cmd, "roll") ? tb_roll(ti, atoi(argv[2])) : tb_roll_recipe(ti, atoi(argv[2]));
+            if (ri < 0) { fprintf(stderr, "roll failed\n"); return 1; }
+        }
+        const char *phrase = ti->rnd_recipe >= 0
+            ? (TB_RECIPES[ti->rnd_recipe].phrase ? TB_RECIPES[ti->rnd_recipe].phrase : TB_RND_PHRASE[ti->rnd_cat])
+            : (ti->rnd_a_preset >= 0 && tb_rnd_preset_cat(ti->rnd_a_preset) >= 0
+               ? TB_PRESETS[ti->rnd_a_preset].cat : TB_RND_PHRASE[ti->rnd_cat]);
+        const char *rname = ti->rnd_recipe >= 0 ? TB_RECIPES[ti->rnd_recipe].name : "Vary";
+        apply_sets(api, inst, argc, argv, 5);
+        if (!strcmp(argv[4], "-")) {
+            int n = api->get_param(inst, "state", big, sizeof big);
+            printf("%s\t%s\t%d\t%s\n", phrase, rname, g_rnd_vet_tries, n > 0 ? big : "");
+            return 0;
+        }
+        int n = play(api, inst, phrase_for(phrase), pcm, SR * 60, 3.0, 1);
+        wav_write(argv[4], pcm, n);
+        printf("%s\t%s\n", phrase, rname);
         return 0;
     }
     if (!strcmp(cmd, "note") && argc > 4) {
@@ -334,6 +319,170 @@ int main(int argc, char **argv)
                 if (strcmp(full, back) != 0) { all_ok = 0; printf("     %s: restored differently\n", TB_PRESETS[pi].name); }
             }
             CHECK(all_ok, "a state saved before the Mod page restores every preset exactly, whatever the slot was set to");
+        }
+        /* the Random page */
+        {
+            static char st[8192], st2[8192], nm[256], cmd[32];
+            static long nonce = 1;
+            #define RCMD(op) do { snprintf(cmd, sizeof cmd, "%ld", (nonce++) * 100 + (op)); api->set_param(inst, "rnd_cmd", cmd); } while (0)
+            tb_instance_t *ri = (tb_instance_t *)inst;
+            ri->rnd_sync = 1;
+            api->set_param(inst, "preset", "5");
+            api->get_param(inst, "state", st, sizeof st);
+            api->set_param(inst, "rnd_seed", "11");
+            RCMD(10 + 2);   /* roll a pad */
+            api->get_param(inst, "preset_name", nm, sizeof nm);
+            CHECK(!strncmp(nm, "Rand Pad ", 9), "a roll is named for its category");
+            api->get_param(inst, "rnd_status", nm, sizeof nm);
+            CHECK(strstr(nm, "\"pending\":1") && strstr(nm, "\"busy\":0") && !strstr(nm, "\"arch\":\"\""),
+                  "the page is told a roll is pending, measured, and what it is");
+            /* the same value again is a host re-sending it: ignored */
+            api->get_param(inst, "state", st2, sizeof st2);
+            api->set_param(inst, "rnd_cmd", cmd);
+            static char st3[8192];
+            api->get_param(inst, "state", st3, sizeof st3);
+            CHECK(!strcmp(st2, st3), "a repeated command value does nothing (a host re-sending it)");
+            api->get_param(inst, "rnd_cmd", nm, sizeof nm);
+            CHECK(!strcmp(nm, cmd), "the command key answers back its last value");
+            RCMD(10 + 0); RCMD(RC_VARY); RCMD(10 + 9);
+            RCMD(RC_REVERT);
+            api->get_param(inst, "state", st2, sizeof st2);
+            CHECK(!strcmp(st, st2), "Revert after several rolls puts the preset back exactly");
+            api->get_param(inst, "preset_name", nm, sizeof nm);
+            CHECK(!strcmp(nm, TB_PRESETS[5].name), "and under its own name");
+            /* Keep: the roll is yours, Revert does nothing */
+            RCMD(10 + 1);
+            api->get_param(inst, "state", st, sizeof st);
+            RCMD(RC_KEEP);
+            RCMD(RC_REVERT);
+            api->get_param(inst, "state", st2, sizeof st2);
+            CHECK(!strcmp(st, st2), "after Keep, Revert has nothing to undo");
+            /* a kept roll is the next run's starting point, edits included */
+            api->set_param(inst, "cutoff", "0.3333");
+            api->get_param(inst, "state", st, sizeof st);
+            RCMD(10 + 3); RCMD(RC_VARY);
+            RCMD(RC_REVERT);
+            api->get_param(inst, "state", st2, sizeof st2);
+            CHECK(!strcmp(st, st2), "Revert returns an edited kept roll exactly, name and all");
+            /* loading a preset ends a run */
+            RCMD(10 + 4);
+            api->set_param(inst, "preset", "7");
+            api->get_param(inst, "rnd_status", nm, sizeof nm);
+            CHECK(strstr(nm, "\"pending\":0") != NULL, "choosing a preset ends a run of rolls");
+            /* a saved roll restores under its name */
+            RCMD(10 + 2);
+            api->get_param(inst, "state", st, sizeof st);
+            api->set_param(inst, "preset", "3");
+            api->set_param(inst, "state", st);
+            api->get_param(inst, "state", st2, sizeof st2);
+            api->get_param(inst, "preset_name", nm, sizeof nm);
+            CHECK(!strcmp(st, st2) && !strncmp(nm, "Rand Pad ", 9), "a saved roll restores exactly, under its name");
+            api->get_param(inst, "rnd_status", nm, sizeof nm);
+            CHECK(strstr(nm, "\"pending\":0") != NULL, "restoring a state ends a run");
+            /* Vary keeps what the instrument is */
+            int vary_ok = 1;
+            for (int s = 1; s <= 30; s++) {
+                char sd[16]; snprintf(sd, sizeof sd, "%d", s);
+                api->set_param(inst, "preset", "12");
+                const float *src = tb_rnd_bank(12);
+                api->set_param(inst, "rnd_seed", sd);
+                RCMD(RC_VARY);
+                const float *v = ri->eng.p;
+                if (v[P_MODEL] != src[P_MODEL] || v[P_VOICE] != src[P_VOICE] || v[P_FLT_TYPE] != src[P_FLT_TYPE]
+                    || (v[P_AMP_S] >= 0.3f) != (src[P_AMP_S] >= 0.3f)) vary_ok = 0;
+                RCMD(RC_REVERT);
+            }
+            CHECK(vary_ok, "Vary keeps the model, voice mode, filter type and sustain");
+            /* every roll of every recipe is inside that recipe: its switches,
+             * its ranges, its category's rules */
+            {
+                int bad = 0, total = 0;
+                for (int r = 0; r < TB_RECIPE_COUNT; r++) {
+                    tb_rr_t rr; tb_rnd_ranges(&TB_RECIPES[r], &rr);
+                    for (int s = 1; s <= 200; s++) {
+                        uint32_t rng = (uint32_t)s * 2654435761u + (uint32_t)r;
+                        float p[P_COUNT];
+                        tb_rnd_roll_recipe(p, r, &rng);
+                        total++;
+                        int ok = 1;
+                        for (int id = 0; id < P_COUNT; id++) {
+                            if (tb_rnd_is_switch(id)) {
+                                int heard = !(id == P_LAYER && p[P_BLEND] == 0.0f) && !(id == P_LFO_DEST && p[P_LFO_DEPTH] == 0.0f);
+                                if (heard && !tb_rnd_enum_ok(&TB_RECIPES[r], id, p[id])) ok = 0;
+                            }
+                            /* the budget pass may only lower an amount, never below its floor */
+                            if (rr.has[id] && (p[id] < rr.lo[id] - 1e-5f || p[id] > rr.hi[id] + 1e-5f)) {
+                                int lowered = id == P_CHO_MIX && p[id] > rr.hi[id];   /* width floor raises chorus */
+                                if (!lowered && id != P_DLY_FB && id != P_CHO_MODE && id != P_PHS_RATE && id != P_PUMP_RATE && id != P_LFO_DELAY) ok = 0;
+                            }
+                        }
+                        if (!ok) { if (bad < 5) printf("     %s %s seed %d: outside its recipe\n", TB_RND_NAMES[TB_RECIPES[r].cat], TB_RECIPES[r].name, s); bad++; }
+                    }
+                }
+                printf("     %d rolls across %d recipes\n", total, TB_RECIPE_COUNT);
+                CHECK(bad == 0, "every roll sits inside its recipe's switches and ranges");
+                /* rolling a category reaches every one of its recipes, evenly */
+                int even = 1;
+                for (int c = 0; c < R_COUNT; c++) {
+                    int hits[TB_RECIPE_COUNT]; memset(hits, 0, sizeof hits);
+                    uint32_t rng = 77u + (uint32_t)c;
+                    for (int k = 0; k < 4000; k++) hits[tb_rnd_recipe_for(c, &rng)]++;
+                    int nr = 0; for (int r = 0; r < TB_RECIPE_COUNT; r++) if (TB_RECIPES[r].cat == c) nr++;
+                    for (int r = 0; r < TB_RECIPE_COUNT; r++) {
+                        if (TB_RECIPES[r].cat != c) { if (hits[r]) even = 0; continue; }
+                        if (abs(hits[r] - 4000 / nr) > 4000 / nr / 5) even = 0;
+                    }
+                }
+                CHECK(even, "rolling a category reaches each of its recipes, and only those, about equally");
+            }
+            /* the same seed rolls the same patch; the next roll differs */
+            api->set_param(inst, "rnd_seed", "11"); RCMD(10 + 2);
+            api->get_param(inst, "state", st, sizeof st);
+            api->set_param(inst, "rnd_seed", "11"); RCMD(10 + 2);
+            api->get_param(inst, "state", st2, sizeof st2);
+            const char *a1 = strstr(st, "\"model\""), *a2 = strstr(st2, "\"model\"");
+            CHECK(a1 && a2 && !strcmp(a1, a2), "a seed decides the roll");
+            RCMD(10 + 2);
+            api->get_param(inst, "state", st2, sizeof st2);
+            a2 = strstr(st2, "\"model\"");
+            CHECK(a1 && a2 && strcmp(a1, a2) != 0, "rolling again makes a different patch");
+            RCMD(RC_KEEP);
+            ri->rnd_sync = 0;
+
+            /* On the device the roll is measured by a worker thread and the
+             * result applied by the audio thread: it must arrive -- idle or
+             * not -- and be what the inline path makes of the same roll. */
+            void *ti = api->create_instance(".", NULL);
+            tb_instance_t *t = (tb_instance_t *)ti;
+            api->set_param(ti, "rnd_seed", "5");
+            snprintf(cmd, sizeof cmd, "%d", 100 + 10 + 0);
+            api->set_param(ti, "rnd_cmd", cmd);
+            static tb_rjob_t jb;
+            static float want[P_COUNT];
+            jb = t->rnd_job;
+            static tb_engine_t pe; static tb_fx_t pf;
+            tb_rnd_vet(&jb, want, &pe, &pf);
+            static int16_t blk[256];
+            int waited = 0;
+            while (waited < 400 && t->rnd_busy) {
+                struct timespec ts = { 0, 10 * 1000 * 1000 }; nanosleep(&ts, NULL);
+                api->render_block(ti, blk, 128); waited++;
+            }
+            printf("     measured on the worker in %d ms\n", waited * 10);
+            CHECK(!t->rnd_busy && !memcmp(t->eng.p, want, sizeof want),
+                  "the worker's result reaches the audio thread, idle, and matches the inline result");
+            /* a Level set by hand outranks a measurement still in flight */
+            snprintf(cmd, sizeof cmd, "%d", 200 + 10 + 1);
+            api->set_param(ti, "rnd_cmd", cmd);
+            api->set_param(ti, "level", "0.333");
+            for (int i = 0; i < 60; i++) {
+                struct timespec ts = { 0, 10 * 1000 * 1000 }; nanosleep(&ts, NULL);
+                api->render_block(ti, blk, 128);
+            }
+            CHECK(fabsf(t->eng.p[P_LEVEL] - 0.333f) < 1e-4f, "a Level written by hand is not overwritten by a measurement");
+            api->destroy_instance(ti);
+            CHECK(1, "an instance with a running worker is destroyed cleanly");
+            #undef RCMD
         }
         /* enum by name and by index */
         api->set_param(inst, "model", "Bell"); api->get_param(inst, "model", big, sizeof big);

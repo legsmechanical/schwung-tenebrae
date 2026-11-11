@@ -20,7 +20,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const served = JSON.parse(execFileSync(join(root, "build", "tenebrae_tool"), ["json", "chain_params"], { encoding: "utf8" }));
 const keep = ["key", "name", "type", "min", "max", "step", "default", "unit", "options"];
-const params = served.map((p) => Object.fromEntries(keep.filter((k) => k in p).map((k) => [k, p[k]])));
+/* Only real parameters: the Random page's canvas entry is a page, not a
+ * modulation target, and the host's module.json reader has no type for it. */
+const params = served.filter((p) => p.type !== "canvas").map((p) => Object.fromEntries(keep.filter((k) => k in p).map((k) => [k, p[k]])));
 
 const path = join(root, "src", "module.json");
 const mod = JSON.parse(readFileSync(path, "utf8"));

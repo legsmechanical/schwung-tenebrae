@@ -26,12 +26,26 @@ const byKey = new Map(chainParams.map((p) => [p.key, p]));
 const levels = hierarchy.levels;
 
 // ---- the shape of the brief: 4 synth pages, 2 effect pages --------------------
-const links = levels.root.params.filter((p) => p && p.level).map((p) => p.level);
-ok(JSON.stringify(links) === JSON.stringify(["osc", "filter", "amp", "mod", "motion", "space"]),
-   "root links six pages: four for the synth, two for effects");
+const allLinks = levels.root.params.filter((p) => p && p.level).map((p) => p.level);
+ok(JSON.stringify(allLinks) === JSON.stringify(["osc", "filter", "amp", "mod", "motion", "space", "random"]),
+   "root links six pages (four for the synth, two for effects), then Random");
+const links = allLinks.filter((l) => l !== "random");
+
+// ---- the Random page: one page the module draws -----------------------------
+const rnd = levels.random;
+const canvas = chainParams.find((p) => p.type === "canvas");
+ok(rnd && Array.isArray(rnd.knobs) && rnd.knobs.length === 0 && JSON.stringify(rnd.params) === '["rnd_page"]',
+   "Random has no knobs and one entry: its page");
+ok(canvas && canvas.key === "rnd_page" && canvas.canvas_script === "random.js" && canvas.as_page === true &&
+   canvas.enterable === true && JSON.stringify(canvas.extra_keys) === '["rnd_status"]',
+   "rnd_page is an enterable canvas page drawn by random.js, reading rnd_status");
+ok(existsSync(join(root, "src", "random.js")), "random.js is in src/ (scripts/build.sh ships it beside dsp.so)");
+const params = chainParams.filter((p) => p.type !== "canvas");
+const status = JSON.parse(execFileSync(tool, ["json", "rnd_status"], { encoding: "utf8" }));
+ok(["seq", "pending", "busy", "name", "arch", "cat", "anchor"].every((k) => k in status), "rnd_status answers every field the page reads");
 ok(levels.root.list_param === "preset" && levels.root.count_param === "preset_count",
    "root is the preset browser");
-ok(!levels.root.knobs, "root carries no knobs (the browser is page one, then the six pages)");
+ok(!levels.root.knobs, "root carries no knobs (the browser is page one, then the pages)");
 
 const seen = new Set();
 for (const id of links) {
@@ -46,10 +60,10 @@ for (const id of links) {
     seen.add(k);
   }
 }
-ok(seen.size === chainParams.length, `every declared parameter is on a page (${seen.size} of ${chainParams.length})`);
+ok(seen.size === params.length, `every declared parameter is on a page (${seen.size} of ${params.length})`);
 
 // ---- declarations the host acts on -------------------------------------------
-for (const p of chainParams) {
+for (const p of params) {
   if (p.options) {
     ok(p.type === "enum", `${p.key}: a labelled parameter says "enum"`);
     ok(p.short_options && p.short_options.length === p.options.length, `${p.key}: one short option per option`);
@@ -80,7 +94,7 @@ for (const [g, keys] of groups) {
 // ---- module.json carries the same parameters -----------------------------------
 const mod = JSON.parse(readFileSync(join(root, "src", "module.json"), "utf8"));
 const mj = mod.capabilities.chain_params;
-ok(mj.length === chainParams.length, "module.json lists every parameter (the host's modulation table)");
+ok(mj.length === params.length && !mj.some((m) => m.type === "canvas"), "module.json lists every parameter and not the page (the host's modulation table)");
 for (const m of mj) {
   const s = byKey.get(m.key);
   const same = s && s.type === m.type && s.min === m.min && s.max === m.max &&
@@ -102,25 +116,28 @@ let longest = 0, nonAscii = 0;
 ok(longest <= 21, `help lines fit the screen (longest ${longest} characters)`);
 ok(nonAscii === 0, "help text is plain ASCII");
 
-// ---- the host's own planner and validator ---------------------------------------
-const hostDir = join(root, "..", "schwung-current", "src", "shared", "param_pages");
-if (!existsSync(hostDir)) {
-  console.log("SKIP host planner checks: ../schwung-current not found");
-} else {
+// ---- both hosts' own planners and validators -------------------------------------
+// Stock Schwung's checkout beside this repo, and the dAVEBOx fork's.
+for (const [host, rel] of [["stock", "schwung-current"], ["dAVEBOx", "dbxhost"]]) {
+  const hostDir = join(root, "..", rel, "src", "shared", "param_pages");
+  if (!existsSync(hostDir)) { console.log(`SKIP ${host} planner checks: ../${rel} not found`); continue; }
   const { validateContract } = await import(pathToFileURL(join(hostDir, "validate_contract.mjs")));
   const { planPages, PAGE_KNOBS, PAGE_PRESET } = await import(pathToFileURL(join(hostDir, "page_plan.mjs")));
-  const { resolveViz } = await import(pathToFileURL(join(hostDir, "viz.mjs")));
   const r = validateContract({ id: "tenebrae", hierarchy, chainParams, capabilities: mod.capabilities });
   const bad = r.findings.filter((f) => f.level !== "info");
-  for (const f of r.findings) console.log(`     host ${f.level}: ${f.rule} - ${f.message}`);
-  ok(bad.length === 0, "host validator: no errors or warnings");
+  for (const f of r.findings) console.log(`     ${host} ${f.level}: ${f.rule} - ${f.message}`);
+  ok(bad.length === 0, `${host} validator: no errors or warnings`);
   const { pages } = planPages({ hierarchy, chainParams });
-  ok(pages[0].kind === PAGE_PRESET, "host plans the preset browser first");
-  const grids = pages.filter((p) => p.kind === PAGE_KNOBS);
-  ok(grids.length === 6, `host plans six knob pages (${grids.map((p) => p.name).join(" / ")})`);
+  ok(pages[0].kind === PAGE_PRESET, `${host} plans the preset browser first`);
+  const grids = pages.filter((p) => p.kind === PAGE_KNOBS && !p.canvas);
+  ok(grids.length === 6, `${host} plans six knob pages (${grids.map((p) => p.name).join(" / ")})`);
   ok(grids.every((p, i) => JSON.stringify(p.keys) === JSON.stringify(levels[links[i]].knobs)),
-     "each planned page holds its level's knobs, in order");
-  ok(pages.length === 7, "nothing else is planned (the browser and the six pages)");
+     `${host}: each planned page holds its level's knobs, in order`);
+  const last = pages[pages.length - 1];
+  const isCanvas = last && last.level === "random" && last.canvas && last.canvas.script === "random.js" &&
+                   last.canvas.enterable === true && JSON.stringify(last.canvas.extraKeys) === '["rnd_status"]';
+  ok(isCanvas && (last.keys || []).length === 0, `${host} plans Random last, as the module's own page with no knobs (${last && last.name})`);
+  ok(pages.length === 8, `${host}: nothing else is planned (the browser, the six pages, Random)`);
 }
 
 console.log(failures ? `\n${failures} FAILED` : "\ncontract ok");

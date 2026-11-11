@@ -18,7 +18,7 @@ if [ ! -f /.dockerenv ]; then
     command -v cc >/dev/null   || { echo "ERROR: no C compiler for the native tool" >&2; exit 1; }
     command -v node >/dev/null || { echo "ERROR: node not found; module.json would be stale" >&2; exit 1; }
     mkdir -p build
-    cc -O2 -Wall -Wextra -Isrc -Isrc/dsp tools/tenebrae_tool.c -lm -o build/tenebrae_tool
+    cc -O2 -Wall -Wextra -Isrc -Isrc/dsp tools/tenebrae_tool.c -lm -lpthread -o build/tenebrae_tool
     node tools/gen_module_json.mjs
     if [ -z "${CROSS_PREFIX:-}" ]; then
         if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
@@ -62,6 +62,7 @@ fi
 cat build/dsp.so      > "dist/$ID/dsp.so"
 cat src/module.json   > "dist/$ID/module.json"
 cat src/ui.js         > "dist/$ID/ui.js"
+cat src/random.js     > "dist/$ID/random.js"
 cat src/help.json     > "dist/$ID/help.json"
 chmod +x "dist/$ID/dsp.so"
 

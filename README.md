@@ -8,7 +8,8 @@ drift out of tune, leads that scream through a hard clip, plucks that vanish
 into long echoes, bells from somewhere they shouldn't be, and a worn tape
 wobbling under all of it. Very little sits still: envelopes, LFOs and
 tempo-locked effects keep every sound moving. It has six pages of
-knobs. Four of them make the sound and two dress it. Every knob is a
+knobs. Four of them make the sound and two dress it. A seventh page rolls a
+new sound. Every knob is a
 *macro*: one turn moves several things at once, and each range is cut so that
 most of its travel sounds good.
 
@@ -19,6 +20,9 @@ most of its travel sounds good.
   and a reverb with shimmer.
 - **163 presets** and an Init patch, from heavy basses and wide pads to a set of retro and
   modern horror-soundtrack sounds.
+- **A Random page** that makes new sounds in ten categories (bass, lead,
+  pad and so on) from around forty sound recipes, or varies the sound you
+  have, and always lets you go back to where you were.
 - **8 voices**, with mono and glide modes.
 
 ## Install
@@ -38,6 +42,8 @@ generator.
 - **Octave**: Up / Down shifts the pads by an octave, up to four either way.
 - **Pages**: choose Osc, Filter, Amp, Mod, FX Motion or FX Space. The knobs
   then control that page's settings, in the order of the table below.
+- **Random**: the last page. Click in, turn to a row, click to make a new
+  sound. See [Random](#random).
 - **Saving**: the host's own My Presets page saves and recalls your sounds.
 
 Tenebrae also responds to:
@@ -188,6 +194,58 @@ Delay, Reverb and Shimmer, Pump, VHS, then Level.
 
 However wide the chorus or phaser makes a bass, its lowest notes stay centred:
 the effects widen the body and leave the weight in the middle.
+
+## Random
+
+The last page is a list you click into:
+
+**Vary Current** · Bass · Lead · Pad · Keys · Pluck · Brass · Voice · Stab ·
+Sequence · FX
+
+Turning the jog wheel only moves the cursor. **Click** a category to make a
+new sound of that kind, and click again for another. **Vary Current** makes
+a close relative of the sound you started from instead: the same instrument,
+moved. Play each one as long as you like.
+
+When you press **Back** with a new sound playing, Tenebrae asks **Keep** or
+**Revert**. Revert puts back exactly the sound you had before your first
+click, however many you made. Leaving the page another way keeps the new sound
+playing, and Back on your next visit still offers Revert. Choosing a preset
+also ends it.
+
+### How a sound is made
+
+Each category has a handful of recipes, around forty in all: a reese, an acid
+line and a sub among the basses, a supersaw, an ensemble and a choir among the
+pads, and so on. A recipe says which oscillators, filters and voice modes
+belong to it, the range each defining setting must sit in, and how much
+movement, space, grit and width the sound may have in total.
+
+A new sound is built in the order a sound designer works: oscillator, filter,
+amp envelope, modulation, then the two effects pages. Each section is either
+taken whole from a factory preset (of any category) that fits the recipe, or
+blended from two that do, sometimes a little past either one. That way what
+holds a section together survives, and the result can still land where no
+preset is. Whatever the earlier sections spent of the movement, space, grit
+and width totals shapes what the later ones may add.
+
+Tenebrae then **plays the new sound once, out of earshot, and measures it**.
+It sets the Level to match the presets, and checks the sound against its
+category: it must keep sounding through its phrase, a bass must have real low
+end, and a pad must be wide and stay out of the bass. A sound that fails is
+replaced by another from the same recipe. This takes a fraction of a second.
+The sound you hear first can change once, quietly, when it does.
+
+**Vary Current** keeps what makes the sound the instrument it is: its
+oscillator model, voice mode, filter type, and whether it holds or dies away.
+It nudges everything else and sometimes swaps in another preset's modulation
+or effects.
+
+A new sound is named for its category and a number, such as *Rand Pad 12*. Once
+kept, it is an ordinary sound: edit it on any page and save it with My
+Presets.
+
+The page needs Schwung 1.5.0 or later.
 
 ## Presets
 
