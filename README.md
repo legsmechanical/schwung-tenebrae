@@ -7,8 +7,8 @@ Tenebrae is for sounds with a shadow over them: basses that snarl, pads that
 drift out of tune, leads that scream through a hard clip, plucks that vanish
 into long echoes, bells from somewhere they shouldn't be, and a worn tape
 wobbling under all of it. Very little sits still: envelopes, LFOs and
-tempo-locked effects keep every sound moving. It has five pages of
-eight knobs. Three of them make the sound and two dress it. Every knob is a
+tempo-locked effects keep every sound moving. It has six pages of
+knobs. Four of them make the sound and two dress it. Every knob is a
 *macro*: one turn moves several things at once, and each range is cut so that
 most of its travel sounds good.
 
@@ -17,7 +17,7 @@ most of its travel sounds good.
 - **A gritty filter** with three kinds of drive on one knob.
 - **A cinematic effects chain**: chorus, phaser, tempo pump, VHS, tape delay
   and a reverb with shimmer.
-- **163 presets**, from heavy basses and wide pads to a set of retro and
+- **163 presets** and an Init patch, from heavy basses and wide pads to a set of retro and
   modern horror-soundtrack sounds.
 - **8 voices**, with mono and glide modes.
 
@@ -36,9 +36,8 @@ generator.
 - **Presets**: the first page is the preset browser. Turn the jog wheel to
   move through the presets, or press Left / Right to step one at a time.
 - **Octave**: Up / Down shifts the pads by an octave, up to four either way.
-- **Pages**: choose Osc, Filter, Amp + LFO, FX Motion or FX Space. The eight
-  knobs then control that page's eight settings, in the order of the table
-  below.
+- **Pages**: choose Osc, Filter, Amp, Mod, FX Motion or FX Space. The knobs
+  then control that page's settings, in the order of the table below.
 - **Saving**: the host's own My Presets page saves and recalls your sounds.
 
 Tenebrae also responds to:
@@ -46,8 +45,8 @@ Tenebrae also responds to:
 | | |
 |---|---|
 | **Velocity** | level and brightness; the **Velocity** knob sets how much |
-| **Pad pressure** | vibrato, and opens the filter |
-| **Mod wheel** | vibrato |
+| **Pad pressure** | vibrato and a brighter filter, or what **Pressure Target** picks; the **Pressure** knob sets how much, and 0 turns it off |
+| **Mod wheel** | vibrato; the **Wheel** knob sets how much |
 | **Sustain pedal** | holds notes |
 | **Pitch bend** | ±2 semitones |
 
@@ -68,13 +67,14 @@ Each of these starts from any preset. Change only the knobs named.
   Depth: the vibrato comes in after the note starts, as a player's does.
 - **Dark and worn**: Age up, VHS up, Tone down.
 
-## The five pages
+## The six pages
 
 | Page | Row 1 | Row 2 |
 |---|---|---|
 | **Osc** | Model · Shape · Shape Env · Stack | Layer · Blend · Age · Glide |
 | **Filter** | Type · Cutoff · Resonance · Drive | Env Amount · Attack · Decay · Sustain |
-| **Amp + LFO** | LFO Target · Rate · Depth · Velocity | Attack · Decay · Sustain · Release |
+| **Amp** | Attack · Decay · Sustain · Release | Spread |
+| **Mod** | LFO Target · Rate · Depth · LFO Delay | Velocity · Pressure · Pressure Target · Wheel |
 | **FX Motion** | Chorus Type · Mix · Phaser · Rate | Pump · Division · VHS · Tone |
 | **FX Space** | Delay · Time · Feedback · Level | Reverb · Size · Color · Shimmer |
 
@@ -128,7 +128,14 @@ one knob:
 **Env Amount** is how far the envelope moves the cutoff, up or down.
 **Attack**, **Decay** and **Sustain** shape it, and it releases with the amp.
 
-### Amp + LFO
+### Amp
+
+Row one is the amp envelope. **Spread** fans the notes of a chord across the
+stereo field, each new note taking the next place. Like Stack's width it closes
+up toward the bottom of the keyboard, so a bass stays in the middle, and a mono
+voice is always centred.
+
+### Mod
 
 **LFO Target** chooses what the LFO moves:
 
@@ -142,8 +149,22 @@ one knob:
 | Filter S&H | the filter jumping to random places |
 | Filter Sync Ramp | a falling filter ramp locked to the tempo; **Rate** picks 1/4, 1/8, 1/8T, 1/16 or 1/32 |
 
-**Depth** 0 turns the LFO off. **Velocity** sets how much playing harder
-changes the level and tone. Row two is the amp envelope.
+**Depth** 0 turns the LFO off. **LFO Delay** holds the LFO back after each
+note, up to four seconds, then fades it in: a lead that starts straight and
+blooms into vibrato, a pad whose filter starts moving halfway through.
+
+**Velocity** sets how much playing harder changes the level and tone.
+**Pressure** sets how much pad pressure (aftertouch) does, and 0 turns it off.
+**Pressure Target** picks what it does:
+
+| Target | What pressing does |
+|---|---|
+| Vib + Filter | adds vibrato and opens the filter |
+| Vibrato | adds vibrato only |
+| Filter | opens the filter only |
+| LFO Depth | turns the LFO up, whatever it is moving |
+
+**Wheel** sets how much vibrato the mod wheel adds, and 0 turns it off.
 
 ### FX Motion and FX Space
 
@@ -170,7 +191,8 @@ the effects widen the body and leave the weight in the middle.
 
 ## Presets
 
-163 presets, grouped by category: 26 bass (**BS**), 26 lead (**LD**),
+An **Init** patch first (every control at its default), then 163 presets,
+grouped by category: 26 bass (**BS**), 26 lead (**LD**),
 30 pad (**PD**), 18 keys (**KY**), 24 pluck (**PL**), 11 brass (**BR**),
 9 voices and choirs (**VX**), 6 stabs and hits (**ST**), 5 sequences (**SQ**)
 and 8 effects (**FX**).
@@ -190,16 +212,16 @@ Within each category the presets come in this order:
 
 | | Staples | The effect is the sound | Bigger and wilder | Horror |
 |---|---|---|---|---|
-| **BS** 1–26 | Night Drive · Coastline · Tailfin · Solid State · Chrome Teeth · Undertow · Cold Sequence · Body Work | Sidechain · Phase Runner · Tape Sub · Gatecrash | Acid Rain · Slap Circuit · Mouth · Wolf · Low Rider · Octave Machine · Sync Jaw · Power Line · Bit Reaper · Precinct 13 | Night Stalker · Dread Reese · Cold Heartbeat · Grindhouse |
-| **LD** 27–52 | Sunset · Prism · Razorwire · Black Chrome · Seance · Phantom | Echo Chamber · Shimmer Solo · VHS Rental · Ping Pong · Laserbeam · Neon Choir | Hoover '91 · Shredder · Anthem · Talk To Me · FM Scream · Fifth Element · Pan Pipes · Screamer · Octavia · Raygun Melody | Saucer Signal · Possession · Prowler · Banshee |
-| **PD** 53–82 | Dusk · Glass Avenue · Skyline · Winter Ensemble · Cathedral · Frostline | Aurora · Tidal · Solina Phase · Betamax · Frozen Lake · Gated Heaven · Wide Open · Undersea | Monolith · Sweep Machine · High Wire · Radio Ghost · FM Halo · Sync Tide · Reverse Bloom · Tremolo Sky · Vapor Trail · Prism Scan | Attic Dust · Requiem · The Other Side · Cold Storage · Unease · Hollow House |
-| **KY** 83–100 | Velvet · Chapel · Giallo | Tremolo Motel · Music Box · Tape Piano · Cathode | Pipe Dream · Goblin Clav · Tubular · Wurli Burn · Fantasia · Carousel | Haddonfield · Cursed Music Box · Wake Harmonium · Rotted Rhodes · Deep Tubular |
-| **PL** 101–124 | Neon Arp · Signal · Ricochet · Palm Shadows | Dotted Dream · Raindrops · Cascade · Pulsar · Chorus Harp · Arcade | Jangle '85 · Marimba Nights · Pizzicato · Skyrocket · Koto · Chug · Photon · Vanishing Point | Profondo · Clock Tower · Follower · Bone Marimba · Droplets · Hollow Harp |
-| **BR** 125–135 | Stadium · Off-World |  | Countdown · FM Section · Fanfare · Sync Horns · Velvet Horn · Titan | Overlook · Doom Horn · Room 237 |
-| **VX** 136–144 |  |  | Black Mass · Angel Dust · Robot Heart · Doo-Wop · Siren Song · Mellotape | Nursery Rhyme · Catacomb Monks · Three Mothers |
-| **ST** 145–150 |  |  | Orch Hit · Rave Stab · FM Knife · Sync Slam | Jump Scare · Shower Stabs |
-| **SQ** 151–155 |  |  | Motorik · Triplet Ghost · Strobe · Mainframe | Pursuit |
-| **FX** 156–163 | Laser Toms · Event Horizon | Black Hole · Wormhole · Dead Channel · Thunder Toms |  | Rising Dread · Basement |
+| **BS** 2–27 | Night Drive · Coastline · Tailfin · Solid State · Chrome Teeth · Undertow · Cold Sequence · Body Work | Sidechain · Phase Runner · Tape Sub · Gatecrash | Acid Rain · Slap Circuit · Mouth · Wolf · Low Rider · Octave Machine · Sync Jaw · Power Line · Bit Reaper · Precinct 13 | Night Stalker · Dread Reese · Cold Heartbeat · Grindhouse |
+| **LD** 28–53 | Sunset · Prism · Razorwire · Black Chrome · Seance · Phantom | Echo Chamber · Shimmer Solo · VHS Rental · Ping Pong · Laserbeam · Neon Choir | Hoover '91 · Shredder · Anthem · Talk To Me · FM Scream · Fifth Element · Pan Pipes · Screamer · Octavia · Raygun Melody | Saucer Signal · Possession · Prowler · Banshee |
+| **PD** 54–83 | Dusk · Glass Avenue · Skyline · Winter Ensemble · Cathedral · Frostline | Aurora · Tidal · Solina Phase · Betamax · Frozen Lake · Gated Heaven · Wide Open · Undersea | Monolith · Sweep Machine · High Wire · Radio Ghost · FM Halo · Sync Tide · Reverse Bloom · Tremolo Sky · Vapor Trail · Prism Scan | Attic Dust · Requiem · The Other Side · Cold Storage · Unease · Hollow House |
+| **KY** 84–101 | Velvet · Chapel · Giallo | Tremolo Motel · Music Box · Tape Piano · Cathode | Pipe Dream · Goblin Clav · Tubular · Wurli Burn · Fantasia · Carousel | Haddonfield · Cursed Music Box · Wake Harmonium · Rotted Rhodes · Deep Tubular |
+| **PL** 102–125 | Neon Arp · Signal · Ricochet · Palm Shadows | Dotted Dream · Raindrops · Cascade · Pulsar · Chorus Harp · Arcade | Jangle '85 · Marimba Nights · Pizzicato · Skyrocket · Koto · Chug · Photon · Vanishing Point | Profondo · Clock Tower · Follower · Bone Marimba · Droplets · Hollow Harp |
+| **BR** 126–136 | Stadium · Off-World |  | Countdown · FM Section · Fanfare · Sync Horns · Velvet Horn · Titan | Overlook · Doom Horn · Room 237 |
+| **VX** 137–145 |  |  | Black Mass · Angel Dust · Robot Heart · Doo-Wop · Siren Song · Mellotape | Nursery Rhyme · Catacomb Monks · Three Mothers |
+| **ST** 146–151 |  |  | Orch Hit · Rave Stab · FM Knife · Sync Slam | Jump Scare · Shower Stabs |
+| **SQ** 152–156 |  |  | Motorik · Triplet Ghost · Strobe · Mainframe | Pursuit |
+| **FX** 157–164 | Laser Toms · Event Horizon | Black Hole · Wormhole · Dead Channel · Thunder Toms |  | Rising Dread · Basement |
 
 The numbers are each category's place in the browser.
 

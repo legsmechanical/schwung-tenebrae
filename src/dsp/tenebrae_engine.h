@@ -203,7 +203,7 @@ typedef struct {
     float    F, q;          /* filter coefficients in use */
     float    fgain;
 
-    float    drift, drift_to;   /* per-voice pitch jitter, cents: a new target every 15-110 ms */
+    float    drift, drift_to;   /* per-voice pitch jitter, cents: a new target every 30-220 ms */
     int      drift_wait;
     float    wob_ph1, wob_ph2;  /* per-voice slow wobble: two sines at this voice's own rates */
     float    wob_r1, wob_r2;
@@ -214,6 +214,7 @@ typedef struct {
     float    lfo_phase_off;
     float    sh_val, sh_cur;
     float    pan_cur;
+    float    spread_pos;    /* -1..1: where Spread puts this note in the stereo field */
     float    main_g, lay_g;
     uint32_t rng;
 } tb_voice_t;
@@ -232,6 +233,7 @@ typedef struct {
     float lfo_ph;
     float lfo_sh;            /* current sample & hold value */
     float vib_ph;
+    uint32_t spread_n;       /* note count, for Spread's next position */
     int   snap;              /* take the smoothed controls at once (waking from silence) */
     float bpm;               /* session tempo, set by the wrapper each block */
     double beat;             /* beats since the transport started, < 0 when stopped */
@@ -261,6 +263,10 @@ typedef struct {
     float a_a, a_d, a_s, a_r;
     float lfo_tri_ph, lfo_depth, lfo_sh, lfo_ramp;
     float vib;               /* extra vibrato from wheel / pressure, -1..1 scaled */
+    float lfo_delay, lfo_fade; /* seconds before the LFO comes in, and its fade-in */
+    float press_k, wheel_k;  /* Pressure and Mod Wheel amounts: 1 = the fixed amounts of 1.0 */
+    int   press_dest;
+    float spread;
     float velk;
     float bend;
     float zap_depth, zap_tau;
@@ -572,6 +578,13 @@ static void tb_voice_start(tb_engine_t *e, tb_voice_t *v, int key, float vel, in
         v->F = 0.0f;
         v->sh_cur = v->sh_val = e->lfo_sh;
         v->pan_cur = 0.0f;
+        /* Spread: each new note takes the next place in a golden-ratio walk
+         * across the field, so a chord fans out and no two neighbours land
+         * together. A counter, not the voice's random stream, so the rest of
+         * the voice sounds as it did before Spread existed. */
+        e->spread_n++;
+        float sp = (float)e->spread_n * 0.6180339f;
+        v->spread_pos = 2.0f * (sp - (float)(int)sp) - 1.0f;
     }
     if (fresh || retrigger) {
         tb_env_gate_on(&v->aenv);
@@ -828,6 +841,14 @@ static void tb_frame_prepare(tb_engine_t *e, tb_frame_t *f)
     }
     f->lfo_tri_ph = e->lfo_ph;
     f->lfo_depth = tb_clamp01(p[P_LFO_DEPTH]);
+    /* LFO Delay: 0 = none, up to 4 s, then a fade-in that grows with it */
+    float ld = tb_clamp01(p[P_LFO_DELAY]);
+    f->lfo_delay = 4.0f * ld * ld;
+    f->lfo_fade = 0.35f + 0.5f * f->lfo_delay;
+    f->press_k = 2.0f * tb_clamp01(p[P_PRESS]);
+    f->wheel_k = 2.0f * tb_clamp01(p[P_WHEEL]);
+    f->press_dest = (int)(p[P_PRESS_DEST] + 0.5f);
+    f->spread = tb_clamp01(p[P_SPREAD]);
     f->lfo_sh = e->lfo_sh;
 
     /* Sync Ramp: a falling ramp locked to the tempo -- the filter opens on the
@@ -875,13 +896,21 @@ static void tb_voice_render(tb_engine_t *e, tb_voice_t *v, const tb_frame_t *f, 
 
     if (--v->drift_wait <= 0) {
         v->drift_to = tb_frand(&v->rng) * 22.0f * f->age2;
-        v->drift_wait = 40 + (int)(tb_rand(&v->rng) & 255);
+        v->drift_wait = 80 + (int)(tb_rand(&v->rng) & 511);
     }
-    v->drift += (v->drift_to - v->drift) * 0.012f;
+    v->drift += (v->drift_to - v->drift) * 0.006f;
 
     float lfo_t = tb_tri(f->lfo_tri_ph);
     float lfo_v = tb_tri(f->lfo_tri_ph + v->lfo_phase_off);   /* each voice at its own phase */
+    /* pressure, from the key or the whole channel, whichever is harder */
+    float press = v->pressure > e->chan_pressure ? v->pressure : e->chan_pressure;
+    int pr_vib = f->press_dest == PR_BOTH || f->press_dest == PR_VIB;
+    int pr_flt = f->press_dest == PR_BOTH || f->press_dest == PR_FILTER;
+
+    /* LFO Delay holds the LFO back after each note, then fades it in */
     float dep = f->lfo_depth;
+    if (f->lfo_delay > 0.0f) dep *= tb_smoothstep((v->t_on - f->lfo_delay) / f->lfo_fade);
+    if (f->press_dest == PR_LFO) dep = tb_clamp01(dep + 0.5f * f->press_k * press);
 
     /* Age's slow wobble is per voice: the notes of a chord
      * drift against each other, as separate oscillators do. A wobble the whole
@@ -893,8 +922,7 @@ static void tb_voice_render(tb_engine_t *e, tb_voice_t *v, const tb_frame_t *f, 
     float cents = v->drift + v->n_detune + wobble;
     float semis = v->pitch + f->bend;
     /* pressure and wheel: vibrato */
-    float press = v->pressure > e->chan_pressure ? v->pressure : e->chan_pressure;
-    semis += f->vib * (0.45f * e->modwheel + 0.30f * press * press);
+    semis += f->vib * (0.45f * f->wheel_k * e->modwheel + (pr_vib ? 0.30f * f->press_k * press * press : 0.0f));
     if (f->lfo_dest == D_PITCH) {
         /* comes in after the attack, as a player's vibrato does */
         float fade = tb_smoothstep((v->t_on - 0.12f) / 0.35f);
@@ -962,7 +990,7 @@ static void tb_voice_render(tb_engine_t *e, tb_voice_t *v, const tb_frame_t *f, 
                   + 0.66f * (v->pitch - 48.0f) * (1.0f / 12.0f)
                   + f->fenv_oct * fe * (1.0f - 0.5f * velk + 0.5f * velk * vel)
                   + velk * (vel - 0.6f) * 2.2f
-                  + v->n_cut + 1.2f * press;
+                  + v->n_cut + (pr_flt ? 1.2f * f->press_k * press : 0.0f);
     if (f->lfo_dest == D_FILTER) cut_oct += lfo_t * dep * dep * 4.0f;
     if (f->lfo_dest == D_RAMP) cut_oct += f->lfo_ramp * dep * 5.0f;
     if (f->lfo_dest == D_SH) {
@@ -987,8 +1015,13 @@ static void tb_voice_render(tb_engine_t *e, tb_voice_t *v, const tb_frame_t *f, 
     float vel_gain = (1.0f - velk) + velk * (0.15f + 0.85f * vel * vel);
     float trem = 1.0f;
     if (f->lfo_dest == D_AMP) trem = 1.0f - dep * (0.5f + 0.5f * lfo_t);
-    float pan = 0.0f;
-    if (f->lfo_dest == D_PAN) pan = lfo_v * dep;
+    /* Spread places each note of a chord; like the stack's width it closes up
+     * toward the bottom of the keyboard, so a bass stays in the middle. A mono
+     * voice has no chord to spread. */
+    float pan = f->mono ? 0.0f : v->spread_pos * f->spread * keyw;
+    if (f->lfo_dest == D_PAN) pan += lfo_v * dep;
+    pan = tb_clamp(pan, -1.0f, 1.0f);
+    if (v->declick <= 0.0f && f->spread > 0.0f) v->pan_cur = pan;   /* a new voice starts in its place */
     float dpan = (pan - v->pan_cur) / (float)n;
 
     float a_a = f->a_a, a_d = f->a_d * v->n_time, a_s = f->a_s, a_r = f->a_r * v->n_time;

@@ -25,18 +25,20 @@ const state = get("state");
 const byKey = new Map(chainParams.map((p) => [p.key, p]));
 const levels = hierarchy.levels;
 
-// ---- the shape of the brief: 3 synth pages, 2 effect pages --------------------
+// ---- the shape of the brief: 4 synth pages, 2 effect pages --------------------
 const links = levels.root.params.filter((p) => p && p.level).map((p) => p.level);
-ok(JSON.stringify(links) === JSON.stringify(["osc", "filter", "amp", "motion", "space"]),
-   "root links five pages: three for the synth, two for effects");
+ok(JSON.stringify(links) === JSON.stringify(["osc", "filter", "amp", "mod", "motion", "space"]),
+   "root links six pages: four for the synth, two for effects");
 ok(levels.root.list_param === "preset" && levels.root.count_param === "preset_count",
    "root is the preset browser");
-ok(!levels.root.knobs, "root carries no knobs (the browser is page one, then the five pages)");
+ok(!levels.root.knobs, "root carries no knobs (the browser is page one, then the six pages)");
 
 const seen = new Set();
 for (const id of links) {
   const l = levels[id];
-  ok(Array.isArray(l.knobs) && l.knobs.length === 8, `${id}: exactly eight knobs`);
+  // every page is full but Amp, whose envelope row is followed by Spread alone
+  const want = id === "amp" ? 5 : 8;
+  ok(Array.isArray(l.knobs) && l.knobs.length === want, `${id}: ${want} knobs`);
   ok(JSON.stringify(l.knobs) === JSON.stringify(l.params), `${id}: params and knobs agree`);
   for (const k of l.knobs) {
     ok(byKey.has(k), `${id}: ${k} is declared in chain_params`);
@@ -115,10 +117,10 @@ if (!existsSync(hostDir)) {
   const { pages } = planPages({ hierarchy, chainParams });
   ok(pages[0].kind === PAGE_PRESET, "host plans the preset browser first");
   const grids = pages.filter((p) => p.kind === PAGE_KNOBS);
-  ok(grids.length === 5, `host plans five knob pages (${grids.map((p) => p.name).join(" / ")})`);
+  ok(grids.length === 6, `host plans six knob pages (${grids.map((p) => p.name).join(" / ")})`);
   ok(grids.every((p, i) => JSON.stringify(p.keys) === JSON.stringify(levels[links[i]].knobs)),
-     "each planned page holds its level's eight knobs, in order");
-  ok(pages.length === 6, "nothing else is planned");
+     "each planned page holds its level's knobs, in order");
+  ok(pages.length === 7, "nothing else is planned (the browser and the six pages)");
 }
 
 console.log(failures ? `\n${failures} FAILED` : "\ncontract ok");

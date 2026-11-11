@@ -23,8 +23,11 @@ def check(ok, msg):
     print(("ok   " if ok else "FAIL ") + msg)
 
 rows = [l.split("\t") for l in subprocess.run([TOOL, "list"], capture_output=True, text=True).stdout.strip().split("\n")]
+check(len(rows) == 164, f"164 presets ({len(rows)})")
+# Init is first and outside the categories; every check below is of the bank after it
+check(rows[0][2] == "Init" and int(rows[0][3]) == 164, "Init (uid 164) is the first preset")
+init_row = rows[0]; rows = rows[1:]
 names = [r[2] for r in rows]
-check(len(rows) == 163, f"163 presets ({len(rows)})")
 check(len(set(names)) == len(names), "every name is different")
 check(all(len(n) <= 20 for n in names), "every name fits the screen")
 prefix = {}
@@ -39,7 +42,7 @@ def split(ns):
 uids = [int(r[3]) for r in rows]
 # 22 (KY Iron Bell) was dropped and is retired, never reused
 RETIRED = {22}
-check(sorted(uids) == [u for u in range(164) if u not in RETIRED], "uids are 0..163 less the retired, each used once")
+check(sorted(uids) == [u for u in range(164) if u not in RETIRED], "uids are 0..163 less the retired, each used once (164 is Init)")
 group = [0 if u < 32 else (1 if u < 64 else (2 if u < 128 else (3 if u < 160 else 4))) for u in uids]
 fxbank = [g == 1 for g in group]
 staple_names = [n for n, g in zip(names, group) if g == 0]

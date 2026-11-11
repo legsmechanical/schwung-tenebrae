@@ -1,5 +1,5 @@
 /*
- * tenebrae_presets.h -- the factory bank: 163 presets, grouped by category.
+ * tenebrae_presets.h -- the factory bank: Init, then 163 presets grouped by category.
  *
  *   26 bass, 26 lead, 30 pad, 18 keys, 24 pluck, 11 brass, 9 voices,
  *   6 stabs, 5 sequences, 8 FX.
@@ -24,6 +24,9 @@
  * 128-159 the horror ones, in the order they were first written; 160 on are
  * single additions. 22 (KY Iron Bell) was dropped and is retired: a state
  * saved with it keeps its sound and shows no preset name.
+ *
+ * Init (uid 164) is first, outside the categories: every control at its
+ * default, Level aside. It is the patch a new instance starts on.
  *
  * Each preset lists only what it changes from the defaults in tenebrae_params.h.
  *
@@ -75,6 +78,11 @@ typedef struct { const char *name; const char *cat; int uid; tb_pv_t v[P_COUNT];
 #define PU_16 3
 
 static const tb_preset_t TB_PRESETS[] = {
+
+/* Every control at its default: a saw through the filter, a little reverb.
+ * A starting point, so the only value set is Level. */
+{ "Init", "lead", 164, {
+    S(P_LEVEL, 0.58f) } },
 
 /* ======================================================================= */
 /* BASS                                                                    */
@@ -344,7 +352,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_DRIVE, 0.25f), S(P_FLT_ENV, 0.30f), S(P_FLT_D, 0.30f), S(P_FLT_S, 0.0f), S(P_VEL, 0.70f),
     S(P_AMP_A, 0.0f), S(P_AMP_D, 0.42f), S(P_AMP_S, 0.0f), S(P_AMP_R, 0.30f), S(P_DLY_TIME, T_4),
     S(P_DLY_MIX, 0.12f), S(P_DLY_FB, 0.20f), S(P_REV_MIX, 0.10f), S(P_REV_SIZE, 0.50f),
-    S(P_REV_TONE, 0.30f), S(P_LEVEL, 0.83f) } },
+    S(P_REV_TONE, 0.30f), S(P_LEVEL, 0.78f) } },
 
 /* A seventies exploitation-reel bass: hard sync driven into the clipper, the
  * print scratched, the sub kept clean underneath. */
@@ -668,7 +676,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_LFO_DEST, D_SHAPE), S(P_LFO_RATE, 0.42f), S(P_LFO_DEPTH, 0.45f),
     S(P_VEL, 0.20f), S(P_AMP_A, 0.66f), S(P_AMP_D, 0.70f), S(P_AMP_S, 0.90f), S(P_AMP_R, 0.60f),
     S(P_CHO_MODE, C_II), S(P_CHO_MIX, 0.60f),
-    S(P_TONE, 0.60f), S(P_REV_MIX, 0.40f), S(P_REV_SIZE, 0.65f), S(P_LEVEL, 0.41f) } },
+    S(P_TONE, 0.60f), S(P_REV_MIX, 0.40f), S(P_REV_SIZE, 0.65f), S(P_LEVEL, 0.39f) } },
 
 /* Seven saws wide, opening slowly, pumping on the beat, with an octave of
  * shimmer in the tail. */
@@ -698,7 +706,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_VEL, 0.20f), S(P_AMP_A, 0.70f), S(P_AMP_D, 0.70f), S(P_AMP_S, 0.90f), S(P_AMP_R, 0.62f),
     S(P_CHO_MODE, C_ENS), S(P_CHO_MIX, 0.40f),
     S(P_DLY_TIME, T_4), S(P_DLY_MIX, 0.12f), S(P_DLY_FB, 0.40f),
-    S(P_REV_MIX, 0.55f), S(P_REV_SIZE, 0.75f), S(P_REV_TONE, 0.45f), S(P_LEVEL, 0.48f) } },
+    S(P_REV_MIX, 0.55f), S(P_REV_SIZE, 0.75f), S(P_REV_TONE, 0.45f), S(P_LEVEL, 0.45f) } },
 
 /* Digital glass: a sparse wavetable, stacked, with the tail an octave up. */
 { "PD Frostline", "pad", 19, {
@@ -773,7 +781,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_VEL, 0.20f), S(P_AMP_A, 0.30f), S(P_AMP_D, 0.60f), S(P_AMP_S, 1.0f), S(P_AMP_R, 0.50f),
     S(P_CHO_MODE, C_I), S(P_CHO_MIX, 0.35f), S(P_PUMP, 0.95f), S(P_PUMP_RATE, PU_16),
     S(P_DLY_TIME, T_8D), S(P_DLY_MIX, 0.35f), S(P_DLY_FB, 0.55f),
-    S(P_TONE, 0.30f), S(P_REV_MIX, 0.45f), S(P_REV_SIZE, 0.65f), S(P_SHIMMER, 0.15f), S(P_LEVEL, 0.40f) } },
+    S(P_TONE, 0.30f), S(P_REV_MIX, 0.45f), S(P_REV_SIZE, 0.65f), S(P_SHIMMER, 0.15f), S(P_LEVEL, 0.38f) } },
 
 /* Saws stacked in fifths, spread as wide as the dimension chorus will go,
  * with a quarter-note echo behind. */
@@ -794,7 +802,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_LFO_DEST, D_FILTER), S(P_LFO_RATE, 0.30f), S(P_LFO_DEPTH, 0.35f),
     S(P_VEL, 0.20f), S(P_AMP_A, 0.70f), S(P_AMP_D, 0.70f), S(P_AMP_S, 0.90f), S(P_AMP_R, 0.70f),
     S(P_CHO_MODE, C_II), S(P_CHO_MIX, 0.30f), S(P_PHS_DEPTH, 0.70f), S(P_PHS_RATE, 0.12f),
-    S(P_TONE, 0.05f), S(P_REV_MIX, 0.55f), S(P_REV_SIZE, 0.80f), S(P_REV_TONE, 0.25f), S(P_LEVEL, 0.53f) } },
+    S(P_TONE, 0.05f), S(P_REV_MIX, 0.55f), S(P_REV_SIZE, 0.80f), S(P_REV_TONE, 0.25f), S(P_LEVEL, 0.51f) } },
 
 /* ----------------------------------------------------------------------- */
 /* PAD: bigger and wilder                                                  */
@@ -921,7 +929,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_FLT_A, 0.50f), S(P_FLT_D, 0.70f), S(P_FLT_S, 0.50f), S(P_LFO_DEST, D_FILTER),
     S(P_LFO_RATE, 0.15f), S(P_LFO_DEPTH, 0.25f), S(P_VEL, 0.30f), S(P_AMP_A, 0.55f), S(P_AMP_D, 0.70f),
     S(P_AMP_S, 0.90f), S(P_AMP_R, 0.65f), S(P_CHO_MODE, C_BOTH), S(P_CHO_MIX, 0.45f), S(P_TONE, 0.30f),
-    S(P_REV_MIX, 0.45f), S(P_REV_SIZE, 0.85f), S(P_REV_TONE, 0.25f), S(P_LEVEL, 0.45f) } },
+    S(P_REV_MIX, 0.45f), S(P_REV_SIZE, 0.85f), S(P_REV_TONE, 0.25f), S(P_LEVEL, 0.44f) } },
 
 /* The big analog pad of a modern retro-horror score: a wide saw stack whose
  * filter opens over seconds, a slow phaser, a faint octave in the tail. */
@@ -1250,7 +1258,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_VEL, 0.30f), S(P_AMP_A, 0.01f), S(P_AMP_D, 0.60f), S(P_AMP_S, 0.85f), S(P_AMP_R, 0.35f),
     S(P_CHO_MODE, C_I), S(P_CHO_MIX, 0.30f), S(P_PUMP, 0.50f), S(P_PUMP_RATE, PU_4),
     S(P_DLY_TIME, T_8D), S(P_DLY_MIX, 0.25f), S(P_DLY_FB, 0.50f),
-    S(P_TONE, 0.15f), S(P_REV_MIX, 0.25f), S(P_REV_SIZE, 0.55f), S(P_LEVEL, 0.44f) } },
+    S(P_TONE, 0.15f), S(P_REV_MIX, 0.25f), S(P_REV_SIZE, 0.55f), S(P_LEVEL, 0.42f) } },
 
 /* A plucked string in both choruses at once, nearly all the way up. */
 { "PL Chorus Harp", "arp", 58, {
@@ -1463,7 +1471,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_DRIVE, 0.25f), S(P_FLT_ENV, 0.10f), S(P_FLT_A, 0.15f), S(P_FLT_D, 0.50f), S(P_FLT_S, 0.55f),
     S(P_VEL, 0.70f), S(P_AMP_A, 0.02f), S(P_AMP_D, 0.70f), S(P_AMP_S, 0.85f), S(P_AMP_R, 0.25f),
     S(P_CHO_MODE, C_ENS), S(P_CHO_MIX, 0.30f), S(P_REV_MIX, 0.30f), S(P_REV_SIZE, 0.50f),
-    S(P_LEVEL, 0.51f) } },
+    S(P_LEVEL, 0.49f) } },
 
 /* A fanfare in open fifths, a little overdriven, in a big hall. */
 { "BR Fanfare", "keys", 110, {
@@ -1472,7 +1480,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_FLT_A, 0.20f), S(P_FLT_D, 0.50f), S(P_FLT_S, 0.55f), S(P_VEL, 0.60f), S(P_AMP_A, 0.03f),
     S(P_AMP_D, 0.70f), S(P_AMP_S, 0.85f), S(P_AMP_R, 0.30f), S(P_TONE, 0.05f), S(P_DLY_TIME, T_4),
     S(P_DLY_MIX, 0.15f), S(P_DLY_FB, 0.30f), S(P_REV_MIX, 0.45f), S(P_REV_SIZE, 0.70f),
-    S(P_REV_TONE, 0.55f), S(P_LEVEL, 0.50f) } },
+    S(P_REV_TONE, 0.55f), S(P_LEVEL, 0.48f) } },
 
 /* Horns with a rasp: the sync sweep stands in for the lip buzz at the front
  * of each note. */
@@ -1673,7 +1681,7 @@ static const tb_preset_t TB_PRESETS[] = {
     S(P_DRIVE, 0.70f), S(P_FLT_ENV, 0.20f), S(P_FLT_D, 0.30f), S(P_FLT_S, 0.0f), S(P_AMP_A, 0.0f),
     S(P_AMP_D, 0.40f), S(P_AMP_S, 0.0f), S(P_AMP_R, 0.30f), S(P_PHS_DEPTH, 0.40f), S(P_PHS_RATE, 0.60f),
     S(P_DLY_TIME, T_8), S(P_DLY_MIX, 0.20f), S(P_DLY_FB, 0.35f), S(P_REV_MIX, 0.30f),
-    S(P_REV_SIZE, 0.45f), S(P_LEVEL, 0.48f) } },
+    S(P_REV_SIZE, 0.45f), S(P_LEVEL, 0.47f) } },
 
 /* ----------------------------------------------------------------------- */
 /* ST: horror -- retro and modern horror soundtrack sounds               */

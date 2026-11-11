@@ -19,8 +19,10 @@ enum {
     P_FLT_TYPE, P_CUTOFF, P_RESO, P_DRIVE,
     P_FLT_ENV, P_FLT_A, P_FLT_D, P_FLT_S,
     /* Amp page */
-    P_LFO_DEST, P_LFO_RATE, P_LFO_DEPTH, P_VEL,
-    P_AMP_A, P_AMP_D, P_AMP_S, P_AMP_R,
+    P_AMP_A, P_AMP_D, P_AMP_S, P_AMP_R, P_SPREAD,
+    /* Mod page */
+    P_LFO_DEST, P_LFO_RATE, P_LFO_DEPTH, P_LFO_DELAY,
+    P_VEL, P_PRESS, P_PRESS_DEST, P_WHEEL,
     /* Motion FX page */
     P_CHO_MODE, P_CHO_MIX, P_PHS_RATE, P_PHS_DEPTH,
     P_PUMP_RATE, P_PUMP, P_VHS, P_TONE,
@@ -40,6 +42,8 @@ enum { F_LP24, F_LP12, F_BP, F_HP, F_COUNT };
 enum { D_PITCH, D_SHAPE, D_FILTER, D_AMP, D_PAN, D_SH, D_RAMP, D_COUNT };
 /* Chorus modes */
 enum { C_I, C_II, C_BOTH, C_ENS, C_DIM, C_COUNT };
+/* What aftertouch does */
+enum { PR_BOTH, PR_VIB, PR_FILTER, PR_LFO, PR_COUNT };
 
 enum { PT_FLOAT, PT_BIPOLAR, PT_ENUM };
 
@@ -109,15 +113,7 @@ static const tb_param_t TB_PARAMS[P_COUNT] = {
     [P_FLT_S]     = { "flt_s", "Filter Sustain", "SUS", PT_FLOAT, 0.3f, 0, 0,
                       "{\"group\":\"fenv\",\"role\":\"sustain\"}" },
 
-    /* ---- Amp + LFO ------------------------------------------------------ */
-    [P_LFO_DEST]  = { "lfo_dest", "LFO Target", "LFO", PT_ENUM, D_PITCH,
-                      "Pitch|Shape|Filter|Amp|Pan|Filter S&H|Filter Sync Ramp",
-                      "PIT|SHP|FLT|AMP|PAN|S&H|RMP", 0 },
-    [P_LFO_RATE]  = { "lfo_rate", "LFO Rate", "RATE", PT_FLOAT, 0.55f, 0, 0,
-                      "{\"group\":\"lfo\",\"role\":\"rate\"}" },
-    [P_LFO_DEPTH] = { "lfo_depth", "LFO Depth", "DEPTH", PT_FLOAT, 0.0f, 0, 0,
-                      "{\"group\":\"lfo\",\"role\":\"depth\"}" },
-    [P_VEL]       = { "vel", "Velocity", "VEL", PT_FLOAT, 0.5f, 0, 0, 0 },
+    /* ---- Amp ------------------------------------------------------------ */
     [P_AMP_A]     = { "amp_a", "Amp Attack", "ATK", PT_FLOAT, 0.02f, 0, 0,
                       "{\"group\":\"aenv\",\"role\":\"attack\"}" },
     [P_AMP_D]     = { "amp_d", "Amp Decay", "DCY", PT_FLOAT, 0.5f, 0, 0,
@@ -126,6 +122,22 @@ static const tb_param_t TB_PARAMS[P_COUNT] = {
                       "{\"group\":\"aenv\",\"role\":\"sustain\"}" },
     [P_AMP_R]     = { "amp_r", "Amp Release", "REL", PT_FLOAT, 0.35f, 0, 0,
                       "{\"group\":\"aenv\",\"role\":\"release\"}" },
+    [P_SPREAD]    = { "spread", "Spread", "SPREAD", PT_FLOAT, 0.0f, 0, 0, 0 },
+
+    /* ---- Mod ------------------------------------------------------------ */
+    [P_LFO_DEST]  = { "lfo_dest", "LFO Target", "LFO", PT_ENUM, D_PITCH,
+                      "Pitch|Shape|Filter|Amp|Pan|Filter S&H|Filter Sync Ramp",
+                      "PIT|SHP|FLT|AMP|PAN|S&H|RMP", 0 },
+    [P_LFO_RATE]  = { "lfo_rate", "LFO Rate", "RATE", PT_FLOAT, 0.55f, 0, 0,
+                      "{\"group\":\"lfo\",\"role\":\"rate\"}" },
+    [P_LFO_DEPTH] = { "lfo_depth", "LFO Depth", "DEPTH", PT_FLOAT, 0.0f, 0, 0,
+                      "{\"group\":\"lfo\",\"role\":\"depth\"}" },
+    [P_LFO_DELAY] = { "lfo_delay", "LFO Delay", "L.DLY", PT_FLOAT, 0.0f, 0, 0, 0 },
+    [P_VEL]       = { "vel", "Velocity", "VEL", PT_FLOAT, 0.5f, 0, 0, 0 },
+    [P_PRESS]     = { "press", "Pressure", "PRESS", PT_FLOAT, 0.5f, 0, 0, 0 },
+    [P_PRESS_DEST]= { "press_dest", "Pressure Target", "P.TGT", PT_ENUM, PR_BOTH,
+                      "Vib + Filter|Vibrato|Filter|LFO Depth", "V+F|VIB|FLT|LFO", 0 },
+    [P_WHEEL]     = { "wheel", "Mod Wheel", "WHEEL", PT_FLOAT, 0.5f, 0, 0, 0 },
 
     /* ---- Motion FX ------------------------------------------------------ */
     [P_CHO_MODE]  = { "cho_mode", "Chorus Type", "CHORUS", PT_ENUM, C_I,
@@ -150,10 +162,12 @@ static const tb_param_t TB_PARAMS[P_COUNT] = {
     [P_REV_MIX]   = { "rev_mix", "Reverb Mix", "REVERB", PT_FLOAT, 0.15f, 0, 0, 0 },
 };
 
-/* Pages, in jog order. Each is one level of the hierarchy and exactly eight
- * knobs: two rows of four. A viz group (filter response, envelope) must sit
- * inside ONE row, which is why each envelope has a row to itself. */
-#define TB_PAGE_COUNT 5
+/* Pages, in jog order. Each is one level of the hierarchy and up to eight
+ * knobs: two rows of four, -1 ending a short page (a host packs a page's knobs
+ * together, so a gap can only come at the end). A viz group (filter response,
+ * envelope) must sit inside ONE row, which is why each envelope has a row to
+ * itself. */
+#define TB_PAGE_COUNT 6
 typedef struct {
     const char *level;
     const char *name;
@@ -165,13 +179,23 @@ static const tb_page_t TB_PAGES[TB_PAGE_COUNT] = {
       { P_MODEL, P_SHAPE, P_SHAPE_ENV, P_STACK, P_LAYER, P_BLEND, P_AGE, P_VOICE } },
     { "filter", "Filter",
       { P_FLT_TYPE, P_CUTOFF, P_RESO, P_DRIVE, P_FLT_ENV, P_FLT_A, P_FLT_D, P_FLT_S } },
-    { "amp", "Amp + LFO",
-      { P_LFO_DEST, P_LFO_RATE, P_LFO_DEPTH, P_VEL, P_AMP_A, P_AMP_D, P_AMP_S, P_AMP_R } },
+    { "amp", "Amp",
+      { P_AMP_A, P_AMP_D, P_AMP_S, P_AMP_R, P_SPREAD, -1, -1, -1 } },
+    { "mod", "Mod",
+      { P_LFO_DEST, P_LFO_RATE, P_LFO_DEPTH, P_LFO_DELAY, P_VEL, P_PRESS, P_PRESS_DEST, P_WHEEL } },
     { "motion", "FX Motion",
       { P_CHO_MODE, P_CHO_MIX, P_PHS_DEPTH, P_PHS_RATE, P_PUMP, P_PUMP_RATE, P_VHS, P_TONE } },
     { "space", "FX Space",
       { P_DLY_MIX, P_DLY_TIME, P_DLY_FB, P_LEVEL, P_REV_MIX, P_REV_SIZE, P_REV_TONE, P_SHIMMER } },
 };
+
+/* Number of knobs on a page */
+static inline int tb_page_knobs(int pg)
+{
+    int n = 0;
+    while (n < 8 && TB_PAGES[pg].knobs[n] >= 0) n++;
+    return n;
+}
 
 /* Number of options in a '|' separated list */
 static inline int tb_option_count(const char *opts)

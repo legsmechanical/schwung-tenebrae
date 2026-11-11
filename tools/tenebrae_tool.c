@@ -4,6 +4,7 @@
  *   tenebrae_tool json <key>                     print what get_param serves
  *   tenebrae_tool render <preset> <out.wav> [phrase] [key=value ...]
  *   tenebrae_tool note <out.wav> <note> <secs> [key=value ...]     one held note from Init
+ *                (at=0..127 channel pressure, cc1=0..127 mod wheel, held for the note)
  *   tenebrae_tool bench                          cost of 8 held voices, per model
  *   tenebrae_tool cost                           cost of each preset playing its phrase
  *   tenebrae_tool list                           index, category, name, uid of every preset
@@ -105,6 +106,9 @@ static void apply_sets(plugin_api_v2_t *api, void *inst, int argc, char **argv, 
         if (!eq) continue;
         *eq = '\0';
         if (!strcmp(argv[i], "bpm")) g_bpm = (float)atof(eq + 1);
+        /* performance controls, sent as MIDI before the phrase: they hold */
+        else if (!strcmp(argv[i], "at")) { uint8_t m[2] = { 0xD0, (uint8_t)(atoi(eq + 1) & 127) }; api->on_midi(inst, m, 2, 0); }
+        else if (!strcmp(argv[i], "cc1")) { uint8_t m[3] = { 0xB0, 1, (uint8_t)(atoi(eq + 1) & 127) }; api->on_midi(inst, m, 3, 0); }
         else api->set_param(inst, argv[i], eq + 1);
         *eq = '=';
     }
@@ -304,6 +308,33 @@ int main(int argc, char **argv)
             if (n <= 0 || fabs(atof(r) - (double)want) > 0.0006) { fail++; printf("FAIL readback %s: wrote %s read %s\n", TB_PARAMS[i].key, v, r); }
         }
         printf("ok   readback of %d keys\n", P_COUNT);
+        /* a state saved before a control existed comes back as it was saved:
+         * the controls it does not name return to their defaults, whatever the
+         * instance was set to before */
+        {
+            static const char *NEWER[] = { "lfo_delay", "press", "press_dest", "wheel", "spread" };
+            static char full[8192], old[8192], back[8192];
+            int all_ok = 1;
+            for (int pi = 0; pi < TB_PRESET_COUNT; pi++) {
+                char ix[16]; snprintf(ix, sizeof ix, "%d", pi);
+                api->set_param(inst, "preset", ix);
+                api->get_param(inst, "state", full, sizeof full);
+                /* the blob as v1.0.0 wrote it: without the newer keys */
+                strcpy(old, full);
+                for (int k = 0; k < 5; k++) {
+                    char pat[48]; snprintf(pat, sizeof pat, ",\"%s\":", NEWER[k]);
+                    char *at = strstr(old, pat);
+                    if (!at) continue;
+                    char *e = at + 1; while (*e && *e != ',' && *e != '}') e++;
+                    memmove(at, e, strlen(e) + 1);
+                }
+                for (int k = 0; k < 5; k++) api->set_param(inst, NEWER[k], "1");
+                api->set_param(inst, "state", old);
+                api->get_param(inst, "state", back, sizeof back);
+                if (strcmp(full, back) != 0) { all_ok = 0; printf("     %s: restored differently\n", TB_PRESETS[pi].name); }
+            }
+            CHECK(all_ok, "a state saved before the Mod page restores every preset exactly, whatever the slot was set to");
+        }
         /* enum by name and by index */
         api->set_param(inst, "model", "Bell"); api->get_param(inst, "model", big, sizeof big);
         CHECK(atoi(big) == M_BELL, "enum accepts an option name");

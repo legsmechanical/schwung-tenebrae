@@ -11,9 +11,9 @@
         "that scream, echoes",
         "that won't stop.",
         "",
-        "Three pages make the",
+        "Four pages make the",
         "sound: Osc, Filter,",
-        "Amp + LFO. Two more",
+        "Amp, Mod. Two more",
         "polish it: FX Motion",
         "and FX Space.",
         "",
@@ -142,7 +142,20 @@
       ]
     },
     {
-      "title": "Amp + LFO",
+      "title": "Amp",
+      "lines": [
+        "Row one is the amp",
+        "envelope.",
+        "",
+        "SPREAD fans a",
+        "chord's notes across",
+        "the stereo field.",
+        "Low notes and mono",
+        "stay centred."
+      ]
+    },
+    {
+      "title": "Mod",
       "lines": [
         "LFO picks what the",
         "LFO moves:",
@@ -161,18 +174,26 @@
         "1/4, 1/8, 1/8T, 1/16",
         "or 1/32.",
         "",
+        "L.DLY holds the LFO",
+        "back after a note,",
+        "then fades it in.",
+        "",
         "VEL: how much",
         "velocity changes",
         "level and tone.",
         "",
-        "Row two is the amp",
-        "envelope.",
+        "PRESS: how much pad",
+        "pressure does. 0 is",
+        "off. P.TGT picks:",
+        " V+F vibrato and",
+        "  filter",
+        " VIB vibrato",
+        " FLT filter",
+        " LFO more LFO depth",
         "",
-        "Pad pressure and the",
-        "mod wheel add",
-        "vibrato. Pressure",
-        "also opens the",
-        "filter."
+        "WHEEL: how much",
+        "vibrato the mod",
+        "wheel adds."
       ]
     },
     {

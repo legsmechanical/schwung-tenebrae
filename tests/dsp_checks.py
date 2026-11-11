@@ -190,6 +190,51 @@ x = render(31, 2.0, stack=0.8)
 corr2 = np.corrcoef(x[SR // 2:SR * 2, 0], x[SR // 2:SR * 2, 1])[0, 1]
 check(corr2 > 0.995, f"stack at 80 % on a low G: still in the middle (corr {corr2:.3f})")
 
+# ---- Spread: a chord fans out, a bass and a mono voice stay in the middle ------
+def balance(x):
+    return 20 * np.log10(np.sqrt((x[SR // 2:, 0] ** 2).mean()) / np.sqrt((x[SR // 2:, 1] ** 2).mean()))
+b0 = balance(render(69, 1.5, spread=0.0)); b1 = balance(render(69, 1.5, spread=1.0))
+check(abs(b0) < 0.05 and abs(b1) > 1.5, f"spread: centred at 0 ({b0:+.2f} dB), placed off-centre at full ({b1:+.1f} dB)")
+b2 = balance(render(31, 1.5, spread=1.0))
+check(abs(b2) < 0.2, f"spread at full on a low G: still in the middle ({b2:+.2f} dB)")
+b3 = balance(render(69, 1.5, spread=1.0, voice=1))
+check(abs(b3) < 0.05, f"spread on a mono voice: centred ({b3:+.2f} dB)")
+
+# ---- LFO Delay: the LFO waits, then comes in ------------------------------------
+def trem(x, a, b):
+    e = env(x[int(a * SR):int(b * SR)].mean(axis=1), 441)
+    return (e.max() - e.min()) / e.mean()
+x0 = render(69, 3.0, lfo_dest=3, lfo_depth=1.0, lfo_rate=0.6, lfo_delay=0.0)
+x1 = render(69, 3.0, lfo_dest=3, lfo_depth=1.0, lfo_rate=0.6, lfo_delay=0.5)   # 1 s, then a 0.85 s fade
+t0, t1, t2 = trem(x0, 0.2, 0.8), trem(x1, 0.2, 0.8), trem(x1, 2.2, 2.9)
+check(t0 > 0.5 and t1 < 0.1 * t0 and t2 > 0.8 * t0,
+      f"LFO delay 1 s: tremolo {t1:.2f} early against {t0:.2f} undelayed, {t2:.2f} once in")
+
+# ---- Pressure and the mod wheel -------------------------------------------------
+def centroid(x):
+    m = x[SR // 2:SR * 3 // 2].mean(axis=1)
+    s = np.abs(np.fft.rfft(m * np.hanning(len(m)))) ** 2; f = np.fft.rfftfreq(len(m), 1 / SR)
+    return (f * s).sum() / s.sum()
+SUB = dict(layer=0, blend=1.0)   # note 81 with the sine layer alone: 440 Hz, for the pitch tracker
+def wobble(**kw):
+    c = cents_track(render(81, 3.0, **SUB, **kw)[:, 0]); return c.max() - c.min()
+# (a saw's energy sits in its low harmonics, so the centroid moves less than the cutoff)
+c_none = centroid(render(57, 2.0, cutoff=0.5))
+c_flt = centroid(render(57, 2.0, cutoff=0.5, at=127, press_dest=2))
+c_full = centroid(render(57, 2.0, cutoff=0.5, at=127, press_dest=2, press=1.0))
+c_vib = centroid(render(57, 2.0, cutoff=0.5, at=127, press_dest=1))
+c_off = centroid(render(57, 2.0, cutoff=0.5, at=127, press=0))
+check(c_flt > 1.15 * c_none and c_full > 1.1 * c_flt and abs(c_vib / c_none - 1) < 0.05 and abs(c_off / c_none - 1) < 0.01,
+      f"pressure opens the filter ({c_none:.0f} -> {c_flt:.0f} -> {c_full:.0f} Hz at 50 / 100 %) only when its target includes it, and not at 0")
+w_vib, w_flt, w_off = wobble(at=127, press_dest=1), wobble(at=127, press_dest=2), wobble(at=127, press=0)
+check(w_vib > 30 and w_flt < 1 and w_off < 1,
+      f"pressure vibrato: {w_vib:.0f} cents on Vibrato, {w_flt:.1f} on Filter, {w_off:.1f} at Pressure 0")
+w_lfo0, w_lfo = wobble(lfo_dest=0, lfo_depth=0.0), wobble(lfo_dest=0, lfo_depth=0.0, at=127, press_dest=3)
+check(w_lfo0 < 1 and w_lfo > 30, f"pressure on LFO Depth: the pitch LFO comes in under pressure ({w_lfo0:.1f} -> {w_lfo:.0f} cents)")
+w_w0, w_w5, w_w1 = wobble(cc1=127, wheel=0.0), wobble(cc1=127, wheel=0.5), wobble(cc1=127, wheel=1.0)
+check(w_w0 < 1 and 60 < w_w5 < 140 and w_w1 > 1.6 * w_w5,
+      f"mod wheel vibrato: {w_w0:.1f} / {w_w5:.0f} / {w_w1:.0f} cents at Wheel 0 / 50 / 100 %")
+
 # ---- the low end goes back to the middle, the rest does not -------------------
 x = render(36, 2.0, stack=0.0, cho_mix=1.0, cho_mode=4, phs_depth=0.8, cutoff=0.8)   # C2 saw, wide effects
 lo = signal.sosfilt(signal.butter(4, 100, fs=SR, output="sos"), x[SR // 2:], axis=0)

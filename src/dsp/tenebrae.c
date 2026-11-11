@@ -163,7 +163,7 @@ static int build_chain_params(char *buf, int cap)
  * chain host asks the plugin and has no module.json fallback.
  *
  * Root is the preset browser and nothing else, so the browser is the first
- * page and the five knob pages follow in jog order, each named by its own
+ * page and the six knob pages follow in jog order, each named by its own
  * level. A key lives on exactly one level, so nothing is deduplicated away.
  */
 static int build_ui_hierarchy(char *buf, int cap)
@@ -178,10 +178,10 @@ static int build_ui_hierarchy(char *buf, int cap)
     out_fmt(&o, "]}");
     for (int pg = 0; pg < TB_PAGE_COUNT; pg++) {
         out_fmt(&o, ",\"%s\":{\"name\":\"%s\",\"knobs\":[", TB_PAGES[pg].level, TB_PAGES[pg].name);
-        for (int k = 0; k < 8; k++)
+        for (int k = 0; k < tb_page_knobs(pg); k++)
             out_fmt(&o, "%s\"%s\"", k ? "," : "", TB_PARAMS[TB_PAGES[pg].knobs[k]].key);
         out_fmt(&o, "],\"params\":[");
-        for (int k = 0; k < 8; k++)
+        for (int k = 0; k < tb_page_knobs(pg); k++)
             out_fmt(&o, "%s\"%s\"", k ? "," : "", TB_PARAMS[TB_PAGES[pg].knobs[k]].key);
         out_fmt(&o, "]}");
     }
@@ -209,11 +209,15 @@ static int build_state(const tb_instance_t *inst, char *buf, int cap)
 
 /* Restore from a state blob: a flat object of "key":number pairs. Also reads a
  * wrapped preset file ({name, module, version, state:{...}}), since it simply
- * takes every pair whose key it knows. */
+ * takes every pair whose key it knows. A control the blob does not name goes
+ * back to its default: a state saved before that control existed must sound as
+ * it did when it was saved, not keep whatever the instance was set to. */
 static void restore_state(tb_instance_t *inst, const char *json)
 {
     const char *p = json;
     int preset = -1;
+    unsigned char seen[P_COUNT];
+    memset(seen, 0, sizeof seen);
     tb_all_notes_off(&inst->eng);
     while ((p = strchr(p, '"')) != NULL) {
         const char *ks = ++p;
@@ -234,13 +238,15 @@ static void restore_state(tb_instance_t *inst, const char *json)
         if (end == p) continue;
         p = end;
         int id = tb_find_param(key);
-        if (id >= 0) tb_set(inst, id, (float)val);
+        if (id >= 0) { tb_set(inst, id, (float)val); seen[id] = 1; }
         else if (strcmp(key, "preset") == 0) preset = (int)val;
         else if (strcmp(key, "octave_transpose") == 0) {
             int oc = (int)val;
             inst->eng.octave = oc < -4 ? -4 : (oc > 4 ? 4 : oc);
         }
     }
+    for (int i = 0; i < P_COUNT; i++)
+        if (!seen[i]) tb_set(inst, i, TB_PARAMS[i].def);
     inst->preset = -1;
     for (int i = 0; i < TB_PRESET_COUNT && preset >= 0; i++)
         if (TB_PRESETS[i].uid == preset) { inst->preset = i; break; }
