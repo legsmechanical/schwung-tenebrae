@@ -376,7 +376,7 @@ static void *tb_rnd_worker(void *arg)
         struct sched_param sp; memset(&sp, 0, sizeof sp);
         if (pthread_setschedparam(pthread_self(), SCHED_IDLE, &sp) != 0) {
             pthread_setschedparam(pthread_self(), SCHED_OTHER, &sp);
-            (void)nice(19);
+            if (nice(19) == -1) { /* best effort: stay as we are */ }
         }
         pthread_setname_np(pthread_self(), "tenebrae-rnd");
     }
