@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
   "name": "Tenebrae",
-  "description": "Dark, retro macro synth with an edge: snarling basses, drifting pads, screaming leads and long, moving echoes. Eight oscillator models, a gritty filter with three-zone drive, chorus, phaser, tempo pump, VHS, tape delay and shimmer reverb. 163 presets.",
+  "description": "Dark, retro macro synth with an edge: snarling basses, drifting pads, screaming leads and long, moving echoes. Eight oscillator models shaped by Shape, Stack and Age, a gritty state-variable filter with two-stage drive, and a cinematic effects chain: chorus, phaser, tempo pump, VHS, tape delay and shimmer reverb. 163 presets plus an Init patch, and a Random page that makes new sounds by category, or varies yours, with a way back.",
   "download_url": "https://github.com/legsmechanical/schwung-tenebrae/releases/download/v1.0.0/tenebrae-module.tar.gz"
 }
