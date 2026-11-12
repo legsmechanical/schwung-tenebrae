@@ -252,15 +252,11 @@
     {
       "title": "Random",
       "lines": [
-        "Click in, turn to a",
-        "row, click: a new",
-        "sound of that kind.",
-        "Click again for",
-        "another.",
-        "",
-        "VARY CURRENT: a",
-        "close relative of",
-        "the sound you had.",
+        "Click in, turn the",
+        "jog to choose what",
+        "to make, click to",
+        "make it. Click again",
+        "for another.",
         "",
         "BACK asks Keep or",
         "Revert. Revert puts",
@@ -268,9 +264,15 @@
         "before your first",
         "click.",
         "",
-        "Each sound is",
-        "measured and its",
-        "Level set for you."
+        "OSC..SPACE: how far",
+        "each part may move.",
+        "Down keeps it, up",
+        "goes further.",
+        "FRESH: down sticks",
+        "to the presets, up",
+        "invents.",
+        "WILD: past the",
+        "recipes."
       ]
     },
     {

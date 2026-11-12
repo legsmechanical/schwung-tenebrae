@@ -62,7 +62,15 @@
       {"key":"rev_size","name":"Reverb Size","type":"float","min":0,"max":1,"step":0.01,"default":0.5,"unit":"%"},
       {"key":"rev_tone","name":"Reverb Color","type":"float","min":0,"max":1,"step":0.01,"default":0.5,"unit":"%"},
       {"key":"shimmer","name":"Shimmer","type":"float","min":0,"max":1,"step":0.01,"default":0,"unit":"%"},
-      {"key":"rev_mix","name":"Reverb Mix","type":"float","min":0,"max":1,"step":0.01,"default":0.15,"unit":"%"}
+      {"key":"rev_mix","name":"Reverb Mix","type":"float","min":0,"max":1,"step":0.01,"default":0.15,"unit":"%"},
+      {"key":"rnd_osc","name":"Random Osc","type":"float","min":-1,"max":1,"step":0.01,"default":0,"unit":"%"},
+      {"key":"rnd_flt","name":"Random Filter","type":"float","min":-1,"max":1,"step":0.01,"default":0,"unit":"%"},
+      {"key":"rnd_amp","name":"Random Amp","type":"float","min":-1,"max":1,"step":0.01,"default":0,"unit":"%"},
+      {"key":"rnd_mod","name":"Random Mod","type":"float","min":-1,"max":1,"step":0.01,"default":0,"unit":"%"},
+      {"key":"rnd_mot","name":"Random Motion","type":"float","min":-1,"max":1,"step":0.01,"default":0,"unit":"%"},
+      {"key":"rnd_spc","name":"Random Space","type":"float","min":-1,"max":1,"step":0.01,"default":0,"unit":"%"},
+      {"key":"rnd_wild","name":"Random Wild","type":"float","min":0,"max":1,"step":0.01,"default":0,"unit":"%"},
+      {"key":"rnd_fresh","name":"Random Fresh","type":"float","min":-1,"max":1,"step":0.01,"default":0,"unit":"%"}
     ]
   }
 }

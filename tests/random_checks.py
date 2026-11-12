@@ -112,5 +112,39 @@ print(f"     Vary moves a preset {min(vd):.2f} .. {max(vd):.2f} (median {np.medi
 check(min(vd) > 0.05, "Vary always changes the sound")
 check(float(np.median(vd)) < gap, "Vary stays nearer its source than the nearest other preset is, typically")
 
+# ---- the Random page's knobs ---------------------------------------------------
+# At their extremes the rolls go far past the recipes, and must still be safe.
+# Loudness gets a wider window here: a WILD roll can carry a long shimmer or
+# echo tail, which pulls this file-length average down while the sound itself
+# plays at level (the device measures a shorter tail).
+UP = ["rnd_osc=1", "rnd_flt=1", "rnd_amp=1", "rnd_mod=1", "rnd_mot=1", "rnd_spc=1", "rnd_fresh=1", "rnd_wild=1"]
+EXT = T.run([("rollr", r["idx"], s, UP) for r in R for s in range(301, 306)])
+check(all(x["finite"] and x["clipped"] == 0 and x["peak"] <= -1.0 for x in EXT),
+      f"every knob at full: nothing clips, everything peaks under -1 dB ({len(EXT)} rolls)")
+check(all(x["sounding"] >= 0.35 for x in EXT), "every knob at full: everything sounds through its phrase")
+far = [(x["recipe"], x["seed"], round(x["dev"], 1)) for x in EXT if not -22.0 < x["dev"] < 2.0]
+check(not far, "every knob at full: everything within -22 .. +2 dB of its loudness target" + (f": {far}" if far else ""))
+
+def states(kind, ids, seeds, extra):
+    out = []
+    for i in ids:
+        for sd in seeds:
+            o = subprocess.run([T.TOOL, kind, str(i), str(sd), "-"] + extra, capture_output=True, text=True).stdout
+            out.append((i, json.loads(o.rstrip("\n").split("\t", 3)[3])))
+    return out
+def spread(extra):
+    import itertools
+    ss = states("roll", (0, 2, 4, 9), range(401, 411), extra)
+    return float(np.mean([np.mean([dist(a, b) for a, b in itertools.combinations([st for c, st in ss if c == cat], 2)])
+                          for cat in (0, 2, 4, 9)]))
+s_def, s_up = spread([]), spread(UP)
+print(f"     rolls in a category differ by {s_def:.2f} at the defaults, {s_up:.2f} with every knob up")
+check(s_up > 1.4 * s_def, "the knobs widen the rolls")
+def vary_dist(extra):
+    return float(np.median([dist(st, bank[i - 1]) for i, st in states("vary", VARY_FROM[:6], (1, 2, 3), extra)]))
+v_def, v_up = vary_dist([]), vary_dist(UP)
+print(f"     Vary moves a preset {v_def:.2f} at the defaults, {v_up:.2f} with every knob up")
+check(v_up > 3 * v_def, "the knobs widen Vary Current")
+
 print(f"\n{failures} FAILED" if failures else "\nrandom checks ok (safe, even and new; whether they are GOOD is for ears)")
 sys.exit(1 if failures else 0)

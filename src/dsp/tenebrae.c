@@ -48,6 +48,7 @@ typedef struct {
     float       anchor[P_COUNT];   /* what a Vary varied */
     const char *phrase;
     uint32_t    writes;            /* the parameter-write count when it was made */
+    tb_rnd_ctl_t ctl;              /* the Random page's knobs when it was made */
 } tb_rjob_t;
 
 typedef struct {
@@ -57,6 +58,7 @@ typedef struct {
     int         preset;        /* factory preset index, -1 once it is edited away / restored */
     /* The Random page (tenebrae_random.h, and the block below) */
     uint32_t    rnd_rng;       /* the generator */
+    float       rk[RK_COUNT];  /* the Random page's knobs (tenebrae_random.h); not sound */
     int         rnd_cat;       /* category of the roll on now */
     int         rnd_recipe;    /* its recipe, -1 for a Vary */
     int         rnd_n;         /* how many rolls this instance has made: names them */
@@ -138,6 +140,19 @@ static void tb_set(tb_instance_t *inst, int id, float v)
     inst->eng.p[id] = v;
 }
 
+/* The Random page's knobs */
+static int tb_rk_find(const char *key)
+{
+    for (int k = 0; k < RK_COUNT; k++) if (strcmp(TB_RK[k].key, key) == 0) return k;
+    return -1;
+}
+static void tb_rk_set(tb_instance_t *inst, int k, float v)
+{
+    if (!isfinite(v)) return;
+    float lo = TB_RK[k].bipolar ? -1.0f : 0.0f;
+    inst->rk[k] = v < lo ? lo : (v > 1.0f ? 1.0f : v);
+}
+
 static void tb_load_preset(tb_instance_t *inst, int idx)
 {
     if (idx < 0) idx = 0;
@@ -194,6 +209,7 @@ typedef struct {
     float sounding;   /* share of the phrase during which something is heard */
     float low;        /* share of the energy under 150 Hz */
     float corr;       /* left/right correlation: 1 is mono */
+    float short_db;   /* how far under its loudness target even full Level leaves it */
     int   silent;
 } tb_probe_t;
 
@@ -272,7 +288,7 @@ static void tb_rnd_probe(const float *p, const char *phrase, tb_engine_t *e, tb_
     for (int i = 0; i < n_win; i++) if (wins[i] > mx) mx = wins[i];
     out->level = p[P_LEVEL];
     out->silent = mx < 1e-10f || peak <= 0.0f;
-    out->sounding = out->low = 0.0f;
+    out->sounding = out->low = out->short_db = 0.0f;
     out->corr = 1.0f;
     if (out->silent) return;
     double sum_act = 0.0, sum_lo = 0.0;
@@ -289,6 +305,7 @@ static void tb_rnd_probe(const float *p, const char *phrase, tb_engine_t *e, tb_
     float g = tb_rnd_target(phrase) - rms_db;
     if (TB_RND_PEAK_MAX - peak_db < g) g = TB_RND_PEAK_MAX - peak_db;
     float level = out->level * powf(10.0f, g / 40.0f);   /* Level is a squared gain */
+    if (level > 1.0f) out->short_db = 40.0f * log10f(level);
     out->level = level < 0.30f ? 0.30f : (level > 1.0f ? 1.0f : level);
 }
 
@@ -302,6 +319,8 @@ static float tb_rnd_miss(int cat, const char *phrase, const tb_probe_t *m)
     if (m->silent) return 100.0f;
     float miss = 0.0f;
     if (m->sounding < 0.40f) miss += 0.40f - m->sounding + 1.0f;
+    /* so thin that even Level at full leaves it well under the bank */
+    if (m->short_db > 8.0f) miss += m->short_db / 10.0f + 1.0f;
     if (cat == R_BASS && m->low < 0.30f) miss += 0.30f - m->low + 1.0f;
     if (!strcmp(phrase, "pad")) {
         if (m->corr >= 0.74f) miss += m->corr - 0.74f + 1.0f;
@@ -325,10 +344,12 @@ static int tb_rnd_vet(const tb_rjob_t *j, float *out, tb_engine_t *e, tb_fx_t *f
     float best_miss = 1e9f;
     int best_try = 0;
     memcpy(cand, j->p, sizeof cand);
-    for (int t = 0; t < 3; t++) {
+    /* Wild rolls miss more often: give them more tries (at idle priority) */
+    int tries = 3 + (int)(3.0f * j->ctl.wild + 0.5f);
+    for (int t = 0; t < tries; t++) {
         if (t > 0) {
-            if (j->recipe >= 0) tb_rnd_roll_recipe(cand, j->recipe, &rng);
-            else { memcpy(cand, j->anchor, sizeof cand); tb_rnd_vary(cand, j->cat, &rng); }
+            if (j->recipe >= 0) tb_rnd_roll_recipe(cand, j->recipe, &rng, &j->ctl, j->anchor);
+            else { memcpy(cand, j->anchor, sizeof cand); tb_rnd_vary(cand, j->cat, &rng, &j->ctl); }
         }
         tb_probe_t m;
         tb_rnd_probe(cand, j->phrase, e, fx, &m);
@@ -453,6 +474,7 @@ static void tb_rnd_submit(tb_instance_t *inst, int recipe, int cat, const char *
         static tb_engine_t e; static tb_fx_t fx;
         static float res[P_COUNT];
         j.recipe = recipe; j.cat = cat; j.seed = seed; j.phrase = phrase;
+        tb_rnd_ctl_from(inst->rk, &j.ctl);
         memcpy(j.p, inst->eng.p, sizeof j.p);
         memcpy(j.anchor, inst->rnd_anchor, sizeof j.anchor);
         if (!inst->rnd_sync) { inst->rnd_busy = 0; return; }   /* no worker: the first guess stands */
@@ -468,6 +490,7 @@ static void tb_rnd_submit(tb_instance_t *inst, int recipe, int cat, const char *
     memcpy(inst->rnd_job.p, inst->eng.p, sizeof inst->rnd_job.p);
     memcpy(inst->rnd_job.anchor, inst->rnd_anchor, sizeof inst->rnd_job.anchor);
     inst->rnd_job.writes = inst->rnd_writes;
+    tb_rnd_ctl_from(inst->rk, &inst->rnd_job.ctl);
     __atomic_add_fetch(&inst->rnd_job_seq, 1u, __ATOMIC_ACQ_REL);   /* even: done */
     __atomic_store_n(&inst->rnd_job_gen, inst->rnd_gen, __ATOMIC_RELEASE);
     if (pthread_mutex_trylock(&inst->rnd_mu) == 0) {
@@ -509,8 +532,10 @@ static int tb_roll_recipe(tb_instance_t *inst, int ri)
     uint32_t seed = tb_rnd_next(&inst->rnd_rng);
     uint32_t rng = seed;
     float p[P_COUNT];
-    tb_rnd_roll_recipe(p, ri, &rng);
-    tb_rnd_anchor(inst);
+    tb_rnd_ctl_t ctl;
+    tb_rnd_ctl_from(inst->rk, &ctl);
+    tb_rnd_anchor(inst);   /* first: a locked section keeps the sound from before the run */
+    tb_rnd_roll_recipe(p, ri, &rng, &ctl, inst->rnd_anchor);
     tb_rnd_install(inst, p, cat, ri);
     const char *phrase = TB_RECIPES[ri].phrase ? TB_RECIPES[ri].phrase : TB_RND_PHRASE[cat];
     tb_rnd_submit(inst, ri, cat, phrase, tb_rnd_next(&rng));
@@ -544,7 +569,9 @@ static void tb_vary(tb_instance_t *inst)
     uint32_t rng = seed;
     float p[P_COUNT];
     memcpy(p, inst->rnd_anchor, sizeof p);
-    tb_rnd_vary(p, cat, &rng);
+    tb_rnd_ctl_t ctl;
+    tb_rnd_ctl_from(inst->rk, &ctl);
+    tb_rnd_vary(p, cat, &rng, &ctl);
     tb_rnd_install(inst, p, cat, -1);
     const char *phrase = inst->rnd_a_preset >= 0 && tb_rnd_preset_cat(inst->rnd_a_preset) >= 0
                        ? TB_PRESETS[inst->rnd_a_preset].cat : TB_RND_PHRASE[cat];
@@ -647,6 +674,11 @@ static int build_chain_params(char *buf, int cap)
         if (pd->viz) out_fmt(&o, ",\"viz\":%s", pd->viz);
         out_fmt(&o, "}");
     }
+    /* The Random page's knobs: generator settings, saved with the set */
+    for (int k = 0; k < RK_COUNT; k++)
+        out_fmt(&o, ",{\"key\":\"%s\",\"name\":\"%s\",\"short_name\":\"%s\",\"type\":\"float\","
+                    "\"min\":%d,\"max\":1,\"step\":0.01,\"default\":0,\"unit\":\"%%\"}",
+                TB_RK[k].key, TB_RK[k].name, TB_RK[k].short_name, TB_RK[k].bipolar ? -1 : 0);
     /* The Random page: drawn by random.js, which the host loads from the
      * module's folder. Not a parameter: nothing is saved or modulated. */
     out_fmt(&o, ",{\"key\":\"rnd_page\",\"name\":\"Random\",\"type\":\"canvas\","
@@ -675,7 +707,11 @@ static int build_ui_hierarchy(char *buf, int cap)
                 TB_PAGES[pg].level, TB_PAGES[pg].name);
     out_fmt(&o, ",{\"level\":\"random\",\"label\":\"Random\"}]}");
     /* Random: one page the module draws (random.js), clicked into like a list */
-    out_fmt(&o, ",\"random\":{\"name\":\"Random\",\"knobs\":[],\"params\":[\"rnd_page\"]}");
+    out_fmt(&o, ",\"random\":{\"name\":\"Random\",\"knobs\":[");
+    for (int k = 0; k < RK_COUNT; k++) out_fmt(&o, "%s\"%s\"", k ? "," : "", TB_RK[k].key);
+    out_fmt(&o, "],\"params\":[");
+    for (int k = 0; k < RK_COUNT; k++) out_fmt(&o, "\"%s\",", TB_RK[k].key);
+    out_fmt(&o, "\"rnd_page\"]}");
     for (int pg = 0; pg < TB_PAGE_COUNT; pg++) {
         out_fmt(&o, ",\"%s\":{\"name\":\"%s\",\"knobs\":[", TB_PAGES[pg].level, TB_PAGES[pg].name);
         for (int k = 0; k < tb_page_knobs(pg); k++)
@@ -706,6 +742,7 @@ static int build_state(const tb_instance_t *inst, char *buf, int cap)
         else
             out_fmt(&o, ",\"%s\":%.4f", TB_PARAMS[i].key, (double)inst->eng.p[i]);
     }
+    for (int k = 0; k < RK_COUNT; k++) out_fmt(&o, ",\"%s\":%.4f", TB_RK[k].key, (double)inst->rk[k]);
     out_fmt(&o, "}");
     return o.over ? -1 : o.len;
 }
@@ -719,6 +756,7 @@ static void restore_state(tb_instance_t *inst, const char *json)
 {
     const char *p = json;
     int preset = -1, rnd_cat = -1, rnd_n = 0;
+    unsigned rk_seen = 0;
     unsigned char seen[P_COUNT];
     memset(seen, 0, sizeof seen);
     tb_all_notes_off(&inst->eng);
@@ -744,6 +782,7 @@ static void restore_state(tb_instance_t *inst, const char *json)
         if (id >= 0) { tb_set(inst, id, (float)val); seen[id] = 1; }
         else if (strcmp(key, "preset") == 0) preset = (int)val;
         else if (strcmp(key, "rnd_cat") == 0) rnd_cat = (int)val;
+        else if (tb_rk_find(key) >= 0) { int k = tb_rk_find(key); tb_rk_set(inst, k, (float)val); rk_seen |= 1u << k; }
         else if (strcmp(key, "rnd_n") == 0) rnd_n = (int)val;
         else if (strcmp(key, "octave_transpose") == 0) {
             int oc = (int)val;
@@ -752,6 +791,7 @@ static void restore_state(tb_instance_t *inst, const char *json)
     }
     for (int i = 0; i < P_COUNT; i++)
         if (!seen[i]) tb_set(inst, i, TB_PARAMS[i].def);
+    for (int k = 0; k < RK_COUNT; k++) if (!(rk_seen & (1u << k))) inst->rk[k] = 0.0f;
     inst->preset = -1;
     for (int i = 0; i < TB_PRESET_COUNT && preset >= 0; i++)
         if (TB_PRESETS[i].uid == preset) { inst->preset = i; break; }
@@ -866,6 +906,10 @@ static void v2_set_param(void *instance, const char *key, const char *val)
         inst->eng.octave = oc < -4 ? -4 : (oc > 4 ? 4 : oc);
         return;
     }
+    {   /* a Random page knob: not sound, so not a write that blocks a swap */
+        int k = tb_rk_find(key);
+        if (k >= 0) { tb_rk_set(inst, k, (float)atof(val)); inst->rnd_seq++; return; }
+    }
     int id = tb_find_param(key);
     if (id < 0) return;
     if (id == P_LEVEL) inst->rnd_gen++;   /* a Level you set outranks a measured one */
@@ -891,9 +935,12 @@ static int build_rnd_status(const tb_instance_t *inst, char *buf, int cap)
     const char *arch = inst->preset < 0 && inst->rnd_named
                      ? (inst->rnd_recipe >= 0 ? TB_RECIPES[inst->rnd_recipe].name : "Vary") : "";
     tb_out_t o = { buf, cap, 0, 0 };
-    out_fmt(&o, "{\"seq\":%u,\"pending\":%d,\"busy\":%d,\"name\":\"%s\",\"arch\":\"%s\",\"cat\":%d,\"anchor\":\"%s\"}",
+    out_fmt(&o, "{\"seq\":%u,\"pending\":%d,\"busy\":%d,\"name\":\"%s\",\"arch\":\"%s\",\"cat\":%d,\"anchor\":\"%s\",\"rk\":[",
             (unsigned)inst->rnd_seq, inst->rnd_pending, inst->rnd_busy, cur, arch,
             inst->rnd_named ? inst->rnd_cat : -1, inst->rnd_pending ? anc : "");
+    /* the knobs, so the page can draw them (a page reads few keys of its own) */
+    for (int k = 0; k < RK_COUNT; k++) out_fmt(&o, "%s%.3f", k ? "," : "", (double)inst->rk[k]);
+    out_fmt(&o, "]}");
     return o.over ? -1 : o.len;
 }
 
@@ -925,6 +972,10 @@ static int v2_get_param(void *instance, const char *key, char *buf, int buf_len)
     else if (strcmp(key, "polyphony") == 0) n = snprintf(buf, (size_t)buf_len, "%d", inst->eng.active_voices);
     if (n >= 0) return n < buf_len ? n : buf_len - 1;
 
+    {
+        int k = tb_rk_find(key);
+        if (k >= 0) { n = snprintf(buf, (size_t)buf_len, "%.4f", (double)inst->rk[k]); return n < buf_len ? n : buf_len - 1; }
+    }
     int id = tb_find_param(key);
     if (id < 0) return -1;
     if (TB_PARAMS[id].type == PT_ENUM) n = snprintf(buf, (size_t)buf_len, "%d", (int)inst->eng.p[id]);

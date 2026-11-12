@@ -34,24 +34,34 @@ const links = allLinks.filter((l) => l !== "random");
 // ---- the Random page: one page the module draws -----------------------------
 const rnd = levels.random;
 const canvas = chainParams.find((p) => p.type === "canvas");
-ok(rnd && Array.isArray(rnd.knobs) && rnd.knobs.length === 0 && JSON.stringify(rnd.params) === '["rnd_page"]',
-   "Random has no knobs and one entry: its page");
+const RK = ["rnd_osc", "rnd_flt", "rnd_amp", "rnd_mod", "rnd_mot", "rnd_spc", "rnd_wild", "rnd_fresh"];
+ok(rnd && JSON.stringify(rnd.knobs) === JSON.stringify(RK) && JSON.stringify(rnd.params) === JSON.stringify(RK.concat(["rnd_page"])),
+   "Random carries its eight knobs, then its page");
+for (const k of RK) {
+  const p = chainParams.find((q) => q.key === k);
+  const bip = k !== "rnd_wild";
+  ok(p && p.type === "float" && p.min === (bip ? -1 : 0) && p.max === 1 && p.default === 0,
+     `${k}: ${bip ? "bipolar -1..1" : "0..1"}, default 0`);
+  ok(k in state, `${k}: saved with the set`);
+}
 ok(canvas && canvas.key === "rnd_page" && canvas.canvas_script === "random.js" && canvas.as_page === true &&
    canvas.enterable === true && JSON.stringify(canvas.extra_keys) === '["rnd_status"]',
    "rnd_page is an enterable canvas page drawn by random.js, reading rnd_status");
 ok(existsSync(join(root, "src", "random.js")), "random.js is in src/ (scripts/build.sh ships it beside dsp.so)");
 const params = chainParams.filter((p) => p.type !== "canvas");
 const status = JSON.parse(execFileSync(tool, ["json", "rnd_status"], { encoding: "utf8" }));
-ok(["seq", "pending", "busy", "name", "arch", "cat", "anchor"].every((k) => k in status), "rnd_status answers every field the page reads");
+ok(["seq", "pending", "busy", "name", "arch", "cat", "anchor", "rk"].every((k) => k in status) && status.rk.length === 8,
+   "rnd_status answers every field the page reads, the eight knob values among them");
 ok(levels.root.list_param === "preset" && levels.root.count_param === "preset_count",
    "root is the preset browser");
 ok(!levels.root.knobs, "root carries no knobs (the browser is page one, then the pages)");
 
 const seen = new Set();
-for (const id of links) {
+for (const id of links.concat(["random"])) {
   const l = levels[id];
   // every page is full but Amp, whose envelope row is followed by Spread alone
   const want = id === "amp" ? 5 : 8;
+  if (id === "random") { for (const k of l.knobs) { ok(!seen.has(k), `random: ${k} sits on one page only`); seen.add(k); } continue; }
   ok(Array.isArray(l.knobs) && l.knobs.length === want, `${id}: ${want} knobs`);
   ok(JSON.stringify(l.knobs) === JSON.stringify(l.params), `${id}: params and knobs agree`);
   for (const k of l.knobs) {
@@ -129,15 +139,20 @@ for (const [host, rel] of [["stock", "schwung-current"], ["dAVEBOx", "dbxhost"]]
   ok(bad.length === 0, `${host} validator: no errors or warnings`);
   const { pages } = planPages({ hierarchy, chainParams });
   ok(pages[0].kind === PAGE_PRESET, `${host} plans the preset browser first`);
-  const grids = pages.filter((p) => p.kind === PAGE_KNOBS && !p.canvas);
+  const grids = pages.filter((p) => p.kind === PAGE_KNOBS && !p.canvas && p.level !== "random");
   ok(grids.length === 6, `${host} plans six knob pages (${grids.map((p) => p.name).join(" / ")})`);
   ok(grids.every((p, i) => JSON.stringify(p.keys) === JSON.stringify(levels[links[i]].knobs)),
      `${host}: each planned page holds its level's knobs, in order`);
   const last = pages[pages.length - 1];
   const isCanvas = last && last.level === "random" && last.canvas && last.canvas.script === "random.js" &&
                    last.canvas.enterable === true && JSON.stringify(last.canvas.extraKeys) === '["rnd_status"]';
-  ok(isCanvas && (last.keys || []).length === 0, `${host} plans Random last, as the module's own page with no knobs (${last && last.name})`);
-  ok(pages.length === 8, `${host}: nothing else is planned (the browser, the six pages, Random)`);
+  ok(isCanvas && JSON.stringify(last.keys) === JSON.stringify(RK), `${host} plans Random last, as the module's own page carrying the eight knobs (${last && last.name})`);
+  // The host also plans a plain knob page for the Random level's knobs, just
+  // before the drawn one. A page cannot claim its level's knobs on either
+  // host; this pins that it is the ONLY extra page.
+  const extra = pages.filter((p) => p.level === "random" && !p.canvas);
+  ok(extra.length === 1 && JSON.stringify(extra[0].keys) === JSON.stringify(RK), `${host}: the Random knobs also get one plain page (${extra.map((p) => p.name).join()})`);
+  ok(pages.length === 9, `${host}: nothing else is planned (the browser, the six pages, the Random knobs, Random)`);
 }
 
 console.log(failures ? `\n${failures} FAILED` : "\ncontract ok");

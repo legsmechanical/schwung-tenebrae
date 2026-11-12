@@ -22,7 +22,8 @@ most of its travel sounds good.
   modern horror-soundtrack sounds.
 - **A Random page** that makes new sounds in ten categories (bass, lead,
   pad and so on) from around forty sound recipes, or varies the sound you
-  have, and always lets you go back to where you were.
+  have. Eight knobs set how far each part may stray, and you can always go
+  back to where you were.
 - **8 voices**, with mono and glide modes.
 
 ## Install
@@ -42,8 +43,8 @@ generator.
 - **Octave**: Up / Down shifts the pads by an octave, up to four either way.
 - **Pages**: choose Osc, Filter, Amp, Mod, FX Motion or FX Space. The knobs
   then control that page's settings, in the order of the table below.
-- **Random**: the last page. Click in, turn to a row, click to make a new
-  sound. See [Random](#random).
+- **Random**: the last page. Click in, turn the jog to choose what to make,
+  click to make it. See [Random](#random).
 - **Saving**: the host's own My Presets page saves and recalls your sounds.
 
 Tenebrae also responds to:
@@ -197,21 +198,40 @@ the effects widen the body and leave the weight in the middle.
 
 ## Random
 
-The last page is a list you click into:
+The last page makes new sounds:
 
-**Vary Current** · Bass · Lead · Pad · Keys · Pluck · Brass · Voice · Stab ·
-Sequence · FX
+```
+   OSC    FILT    AMP     MOD        how far each part may change
+ <         Pad              >        what to make: jog left / right
+   MOTN   SPACE   WILD    FRESH
+```
 
-Turning the jog wheel only moves the cursor. **Click** a category to make a
-new sound of that kind, and click again for another. **Vary Current** makes
-a close relative of the sound you started from instead: the same instrument,
-moved. Play each one as long as you like.
+Click into the page and turn the jog to choose what to make: **Vary
+Current**, or a category (Bass, Lead, Pad, Keys, Pluck, Brass, Voice, Stab,
+Sequence, FX). **Click** to make one, and click again for another. A category
+makes a new sound of that kind. Vary Current makes a relative of the sound
+you started from. Play each one as long as you like.
 
 When you press **Back** with a new sound playing, Tenebrae asks **Keep** or
 **Revert**. Revert puts back exactly the sound you had before your first
 click, however many you made. Leaving the page another way keeps the new sound
 playing, and Back on your next visit still offers Revert. Choosing a preset
 also ends it.
+
+### The knobs
+
+The eight knobs set how far a new sound may stray. They work whether or not
+you have clicked in, and they are saved with the set. Choosing a preset or
+making a sound never changes them.
+
+| Knob | Turned down | Middle | Turned up |
+|---|---|---|---|
+| **Osc**, **Filter**, **Amp**, **Mod**, **Motion**, **Space** | keeps that part of your current sound (all the way down: exactly) | the generator's own amount | that part may go further: wider ranges, bigger moves, more often invented |
+| **Fresh** | each part is taken whole from a factory preset | a mix of taken, blended and invented | each part is invented, owing nothing to the presets |
+| **Wild** | (starts at zero) | | past the recipes: other oscillator models, filter types, layers and LFO targets, looser limits; Vary may switch on what was off |
+
+Turning a part all the way down locks it, so you can keep your filter and
+effects and make a new oscillator and envelope, or the reverse.
 
 ### How a sound is made
 
@@ -237,9 +257,9 @@ replaced by another from the same recipe. This takes a fraction of a second.
 The sound you hear first can change once, quietly, when it does.
 
 **Vary Current** keeps what makes the sound the instrument it is: its
-oscillator model, voice mode, filter type, and whether it holds or dies away.
-It nudges everything else and sometimes swaps in another preset's modulation
-or effects.
+oscillator model, voice mode, filter type, and whether it holds or dies away
+(unless Wild is up). It nudges everything else, by as much as each knob
+allows, and sometimes swaps in another preset's modulation or effects.
 
 A new sound is named for its category and a number, such as *Rand Pad 12*. Once
 kept, it is an ordinary sound: edit it on any page and save it with My

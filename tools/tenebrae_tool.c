@@ -153,6 +153,9 @@ int main(int argc, char **argv)
         tb_instance_t *ti = (tb_instance_t *)inst;
         ti->rnd_sync = 1;
         api->set_param(inst, "rnd_seed", argv[3]);
+        /* k=v settings (the Random page's knobs among them) come BEFORE the
+         * roll, so they shape it */
+        apply_sets(api, inst, argc, argv, 5);
         if (!strcmp(cmd, "vary")) {
             api->set_param(inst, "preset", argv[2]);
             tb_vary(ti);
@@ -165,7 +168,6 @@ int main(int argc, char **argv)
             : (ti->rnd_a_preset >= 0 && tb_rnd_preset_cat(ti->rnd_a_preset) >= 0
                ? TB_PRESETS[ti->rnd_a_preset].cat : TB_RND_PHRASE[ti->rnd_cat]);
         const char *rname = ti->rnd_recipe >= 0 ? TB_RECIPES[ti->rnd_recipe].name : "Vary";
-        apply_sets(api, inst, argc, argv, 5);
         if (!strcmp(argv[4], "-")) {
             int n = api->get_param(inst, "state", big, sizeof big);
             printf("%s\t%s\t%d\t%s\n", phrase, rname, g_rnd_vet_tries, n > 0 ? big : "");
@@ -404,6 +406,72 @@ int main(int argc, char **argv)
                 RCMD(RC_REVERT);
             }
             CHECK(vary_ok, "Vary keeps the model, voice mode, filter type and sustain");
+            /* The Random page's knobs */
+            {
+                RCMD(RC_KEEP);
+                api->set_param(inst, "preset", "40");
+                static float before[P_COUNT];
+                memcpy(before, ri->eng.p, sizeof before);
+                api->set_param(inst, "rnd_osc", "-1");
+                api->set_param(inst, "rnd_spc", "-1");
+                int locked = 1;
+                for (int s = 1; s <= 20; s++) {
+                    char sd[16]; snprintf(sd, sizeof sd, "%d", s);
+                    api->set_param(inst, "rnd_seed", sd);
+                    RCMD(10 + (s % 10));
+                    for (int g = 0; g < 2; g++) {
+                        int grp = g ? G_SPACE : G_OSC;
+                        for (int k = 0; TB_RND_GROUP[grp][k] >= 0; k++) {
+                            int id = TB_RND_GROUP[grp][k];
+                            if (ri->eng.p[id] != before[id]) locked = 0;
+                        }
+                    }
+                }
+                CHECK(locked, "a section knob at -1 keeps that section exactly, whatever is rolled");
+                RCMD(RC_REVERT);
+                memcpy(before, ri->eng.p, sizeof before);
+                int vlocked = 1;
+                for (int s = 1; s <= 20; s++) {
+                    char sd[16]; snprintf(sd, sizeof sd, "%d", s);
+                    api->set_param(inst, "rnd_seed", sd);
+                    RCMD(RC_VARY);
+                    for (int k = 0; TB_RND_GROUP[G_OSC][k] >= 0; k++)
+                        if (ri->eng.p[TB_RND_GROUP[G_OSC][k]] != before[TB_RND_GROUP[G_OSC][k]]) vlocked = 0;
+                }
+                CHECK(vlocked, "and Vary leaves it alone too");
+                RCMD(RC_REVERT);
+                static char kb[64];
+                api->get_param(inst, "rnd_osc", kb, sizeof kb);
+                int kept = fabs(atof(kb) + 1.0) < 1e-4;
+                api->set_param(inst, "preset", "3");
+                api->get_param(inst, "rnd_osc", kb, sizeof kb);
+                kept = kept && fabs(atof(kb) + 1.0) < 1e-4;
+                CHECK(kept, "the knobs are not changed by rolling, Revert or choosing a preset");
+                api->get_param(inst, "state", st, sizeof st);
+                api->set_param(inst, "rnd_osc", "0.5");
+                api->set_param(inst, "state", st);
+                api->get_param(inst, "rnd_osc", kb, sizeof kb);
+                CHECK(fabs(atof(kb) + 1.0) < 1e-4, "the knobs are saved with the set");
+                api->set_param(inst, "state", "{\"tenebrae\":1,\"preset\":0}");
+                api->get_param(inst, "rnd_osc", kb, sizeof kb);
+                CHECK(fabs(atof(kb)) < 1e-4, "a set saved before the knobs existed restores them at their defaults");
+                api->set_param(inst, "rnd_osc", "0");
+                api->set_param(inst, "rnd_spc", "0");
+                /* Wild frees the switches: rolls get past their recipes' models */
+                int outside = 0, total = 0;
+                for (int r = 0; r < TB_RECIPE_COUNT; r++)
+                    for (int s = 1; s <= 30; s++) {
+                        uint32_t rng = (uint32_t)s * 2654435761u + (uint32_t)r;
+                        tb_rnd_ctl_t c = TB_RND_CTL_DEFAULT; c.wild = 1.0f;
+                        float p[P_COUNT];
+                        tb_rnd_roll_recipe(p, r, &rng, &c, NULL);
+                        total++;
+                        if (!tb_rnd_enum_ok(&TB_RECIPES[r], P_MODEL, p[P_MODEL])) outside++;
+                    }
+                printf("     with Wild at full, %d of %d rolls use a model outside their recipe\n", outside, total);
+                CHECK(outside > total / 10, "Wild lets rolls past their recipes");
+                RCMD(RC_KEEP);
+            }
             /* every roll of every recipe is inside that recipe: its switches,
              * its ranges, its category's rules */
             {
@@ -413,7 +481,7 @@ int main(int argc, char **argv)
                     for (int s = 1; s <= 200; s++) {
                         uint32_t rng = (uint32_t)s * 2654435761u + (uint32_t)r;
                         float p[P_COUNT];
-                        tb_rnd_roll_recipe(p, r, &rng);
+                        tb_rnd_roll_recipe(p, r, &rng, &TB_RND_CTL_DEFAULT, NULL);
                         total++;
                         int ok = 1;
                         for (int id = 0; id < P_COUNT; id++) {
